@@ -246,6 +246,20 @@ query = SELECT goto FROM spamalias
     AND validity >= UNIX_TIMESTAMP()
 EOF
 
+cat <<EOF > /opt/postfix/conf/sql/mysql_virtual_postmaster_maps.cf
+user = ${DBUSER}
+password = ${DBPASS}
+hosts = unix:/var/run/mysqld/mysqld.sock
+dbname = ${DBNAME}
+query = SELECT \'${VIRTUAL_POSTMASTER_DEFAULT}\' AS goto FROM alias
+  WHERE (domain IN
+      (SELECT domain FROM domain
+        WHERE domain='%d'
+          AND active='1'))
+    AND ('%s' REGEXP '^(MAILER-DAEMON|postmaster|abuse|webmaster)@')
+    LIMIT 1;
+EOF
+
 # Reset GPG key permissions
 mkdir -p /var/lib/zeyple/keys
 chmod 700 /var/lib/zeyple/keys
