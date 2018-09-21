@@ -500,6 +500,24 @@ if [[ ! -f /opt/postfix/conf/custom_postscreen_whitelist.cidr ]]; then
 EOF
 fi
 
+cat <<EOF > /opt/postfix/conf/sql/mysql_virtual_postmaster_maps.cf
+user = ${DBUSER}
+password = ${DBPASS}
+hosts = unix:/var/run/mysqld/mysqld.sock
+dbname = ${DBNAME}
+query = SELECT '${VIRTUAL_POSTMASTER_DEFAULT}' AS goto FROM alias
+  WHERE ((domain IN
+      (SELECT domain FROM domain
+        WHERE domain='%d'
+          AND active='1'))
+     OR (domain in
+      (SELECT alias_domain FROM alias_domain
+        WHERE alias_domain='%d'
+          AND active='1')))
+    AND ('%s' REGEXP '^(MAILER-DAEMON|postmaster|abuse|webmaster)@')
+    LIMIT 1;
+EOF
+
 # Fix Postfix permissions
 chown -R root:postfix /opt/postfix/conf/sql/ /opt/postfix/conf/custom_transport.pcre
 chmod 640 /opt/postfix/conf/sql/*.cf /opt/postfix/conf/custom_transport.pcre
