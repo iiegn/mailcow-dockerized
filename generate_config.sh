@@ -336,6 +336,9 @@ DOVECOT_MASTER_USER=
 # LEAVE EMPTY IF UNSURE
 DOVECOT_MASTER_PASS=
 
+# Add default aliases MAILER-DAEMON|postmaster|abuse|webmaster for virtual
+# domains (regular alias still applies)
+VIRTUAL_POSTMASTER_DEFAULT=postmaster@${MAILCOW_HOSTNAME}
 EOF
 
 mkdir -p data/assets/ssl
