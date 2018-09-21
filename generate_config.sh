@@ -262,6 +262,10 @@ MAILDIR_SUB=Maildir
 # SOGo session timeout in minutes
 SOGO_EXPIRE_SESSION=480
 
+# Add default aliases MAILER-DAEMON|postmaster|abuse|webmaster for virtual
+# domains (regular alias still applies)
+VIRTUAL_POSTMASTER_DEFAULT=postmaster@${MAILCOW_HOSTNAME}
+
 EOF
 
 mkdir -p data/assets/ssl
