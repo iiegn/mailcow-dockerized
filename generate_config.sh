@@ -341,6 +341,10 @@ DOVECOT_MASTER_PASS=
 # https://mailcow.github.io/mailcow-dockerized-docs/debug-reset-tls/
 ACME_CONTACT=
 
+# Add default aliases MAILER-DAEMON|postmaster|abuse|webmaster for virtual
+# domains (regular alias still applies)
+VIRTUAL_POSTMASTER_DEFAULT=postmaster@${MAILCOW_HOSTNAME}
+
 EOF
 
 mkdir -p data/assets/ssl
