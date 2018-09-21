@@ -245,6 +245,10 @@ IPV6_NETWORK=fd4d:6169:6c63:6f77::/64
 # mail_home is ~/Maildir
 MAILDIR_SUB=Maildir
 
+# Add default aliases MAILER-DAEMON|postmaster|abuse|webmaster for virtual
+# domains (regular alias still applies)
+VIRTUAL_POSTMASTER_DEFAULT=postmaster@${MAILCOW_HOSTNAME}
+
 EOF
 
 mkdir -p data/assets/ssl
