@@ -272,6 +272,11 @@ chgrp -R postdrop /var/spool/postfix/public
 chgrp -R postdrop /var/spool/postfix/maildrop
 postfix set-permissions
 
+# Create local lookup tables
+postmap /opt/postfix/conf/check_sasl_access
+postmap /opt/postfix/conf/sender_dependent_relayhost_maps
+postmap /opt/postfix/conf/sasl_passwd
+
 # Check Postfix configuration
 postconf -c /opt/postfix/conf
 
