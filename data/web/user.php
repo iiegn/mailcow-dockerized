@@ -224,11 +224,21 @@ elseif (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == '
     </div>
   </div>
 
+  <hr>
+
   <div class="row">
     <div class="col-md-3 col-xs-5 text-right"><?=$lang['user']['eas_reset'];?>:</div>
     <div class="col-md-9 col-xs-7">
     <button class="btn btn-xs btn-default" data-acl="<?=$_SESSION['acl']['eas_reset'];?>" data-action="delete_selected" data-text="<?=$lang['user']['eas_reset'];?>?" data-item="<?= htmlentities($username); ?>" data-id="eas_cache" data-api-url='delete/eas_cache' href="#"><?=$lang['user']['eas_reset_now'];?></button>
     <p class="help-block"><?=$lang['user']['eas_reset_help'];?></p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-3 col-xs-5 text-right"><?=$lang['user']['sogo_profile_reset'];?>:</div>
+    <div class="col-md-9 col-xs-7">
+    <button class="btn btn-xs btn-default" data-acl="<?=$_SESSION['acl']['sogo_profile_reset'];?>" data-action="delete_selected" data-text="<?=$lang['user']['sogo_profile_reset'];?>?" data-item="<?= htmlentities($username); ?>" data-id="sogo_profile" data-api-url='delete/sogo_profile' href="#"><?=$lang['user']['sogo_profile_reset_now'];?></button>
+    <p class="help-block"><?=$lang['user']['sogo_profile_reset_help'];?></p>
     </div>
   </div>
 
@@ -259,7 +269,11 @@ elseif (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == '
           <a class="btn btn-sm btn-default" id="toggle_multi_select_all" data-id="tla" href="#"><span class="glyphicon glyphicon-check" aria-hidden="true"></span> <?=$lang['mailbox']['toggle_all'];?></a>
           <a class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" href="#"><?=$lang['mailbox']['quick_actions'];?> <span class="caret"></span></a>
           <ul class="dropdown-menu">
-            <li><a data-action="edit_selected" data-id="tla" data-api-url='edit/time_limited_alias' data-api-attr='{}' href="#"><span class="glyphicon glyphicon-time"></span> + 1h</a></li>
+            <li><a data-action="edit_selected" data-id="tla" data-api-url='edit/time_limited_alias' data-api-attr='{"validity":"1"}' href="#"><?=$lang['user']['expire_in'];?> 1 <?=$lang['user']['hour'];?></a></li>
+            <li><a data-action="edit_selected" data-id="tla" data-api-url='edit/time_limited_alias' data-api-attr='{"validity":"6"}' href="#"><?=$lang['user']['expire_in'];?> 6 <?=$lang['user']['hours'];?></a></li>
+            <li><a data-action="edit_selected" data-id="tla" data-api-url='edit/time_limited_alias' data-api-attr='{"validity":"24"}' href="#"><?=$lang['user']['expire_in'];?> 1 <?=$lang['user']['day'];?></a></li>
+            <li><a data-action="edit_selected" data-id="tla" data-api-url='edit/time_limited_alias' data-api-attr='{"validity":"168"}' href="#"><?=$lang['user']['expire_in'];?> 1 <?=$lang['user']['week'];?></a></li>
+            <li><a data-action="edit_selected" data-id="tla" data-api-url='edit/time_limited_alias' data-api-attr='{"validity":"672"}' href="#"><?=$lang['user']['expire_in'];?> 4 <?=$lang['user']['weeks'];?></a></li>
             <li role="separator" class="divider"></li>
             <li><a data-action="delete_selected" data-id="tla" data-api-url='delete/time_limited_alias' href="#"><?=$lang['mailbox']['remove'];?></a></li>
           </ul>
@@ -301,19 +315,26 @@ elseif (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == '
 						<li><?=$lang['user']['spamfilter_yellow'];?></li>
 						<li><?=$lang['user']['spamfilter_red'];?></li>
 					</ul>
-					<p><i><?=$lang['user']['spamfilter_default_score'];?> 5:15</i></p>
 					<p><?=$lang['user']['spamfilter_hint'];?></p>
 				</div>
 			</div>
 
       <div class="form-group">
 				<div class="col-sm-10">
-        <button data-acl="<?=$_SESSION['acl']['spam_score'];?>" type="button" class="btn btn-sm btn-success" data-action="edit_selected"
-          data-item="<?= htmlentities($username); ?>"
-          data-id="spam_score"
-          data-api-url='edit/spam-score'
-          data-api-attr='{}'><?=$lang['user']['save_changes'];?></button>
+
 				</div>
+        <div class="btn-group" data-acl="<?=$_SESSION['acl']['spam_policy'];?>">
+          <a data-acl="<?=$_SESSION['acl']['spam_score'];?>" type="button" class="btn btn-sm btn-success" data-action="edit_selected"
+            data-item="<?= htmlentities($username); ?>"
+            data-id="spam_score"
+            data-api-url='edit/spam-score'
+            data-api-attr='{}'><?=$lang['user']['save_changes'];?></a>
+          <a data-acl="<?=$_SESSION['acl']['spam_score'];?>" type="button" class="btn btn-sm btn-default" data-action="edit_selected"
+            data-item="<?= htmlentities($username); ?>"
+            data-id="spam_score_reset"
+            data-api-url='edit/spam-score'
+            data-api-attr='{"spam_score":"default"}'><?=$lang['user']['spam_score_reset'];?></a>
+        </div>
 			</div>
 
 		</form>
@@ -381,7 +402,7 @@ elseif (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == '
           <li><a data-action="edit_selected" data-id="syncjob" data-api-url='edit/syncjob' data-api-attr='{"active":"1"}' href="#"><?=$lang['mailbox']['activate'];?></a></li>
           <li><a data-action="edit_selected" data-id="syncjob" data-api-url='edit/syncjob' data-api-attr='{"active":"0"}' href="#"><?=$lang['mailbox']['deactivate'];?></a></li>
           <li role="separator" class="divider"></li>
-          <li><a data-action="delete_selected" data-text="<?=$lang['user']['eas_reset'];?>?" data-id="syncjob" data-api-url='delete/syncjob' href="#"><?=$lang['mailbox']['remove'];?></a></li>
+          <li><a data-action="delete_selected" data-id="syncjob" data-api-url='delete/syncjob' href="#"><?=$lang['mailbox']['remove'];?></a></li>
         </ul>
         <a class="btn btn-sm btn-success" href="#" data-toggle="modal" data-target="#addSyncJobModal"><span class="glyphicon glyphicon-plus"></span> <?=$lang['user']['create_syncjob'];?></a>
       </div>

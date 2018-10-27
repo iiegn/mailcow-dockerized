@@ -739,8 +739,10 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
             array(
               'force_pw_update' => strval(intval($MAILBOX_DEFAULT_ATTRIBUTES['force_pw_update'])),
               'tls_enforce_in' => strval(intval($MAILBOX_DEFAULT_ATTRIBUTES['tls_enforce_in'])),
-              'tls_enforce_out' => strval(intval($MAILBOX_DEFAULT_ATTRIBUTES['tls_enforce_out'])))
-            );
+              'tls_enforce_out' => strval(intval($MAILBOX_DEFAULT_ATTRIBUTES['tls_enforce_out'])),
+              'sogo_access' => strval(intval($MAILBOX_DEFAULT_ATTRIBUTES['sogo_access']))
+            )
+          );
           if (!is_valid_domain_name($domain)) {
             $_SESSION['return'][] = array(
               'type' => 'danger',
@@ -1151,13 +1153,26 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
             return false;
           }
           foreach ($usernames as $username) {
+            if ($_data['spam_score'] == "default") {
+              $stmt = $pdo->prepare("DELETE FROM `filterconf` WHERE `object` = :username
+                AND (`option` = 'lowspamlevel' OR `option` = 'highspamlevel')");
+              $stmt->execute(array(
+                ':username' => $username
+              ));
+              $_SESSION['return'][] = array(
+                'type' => 'success',
+                'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
+                'msg' => array('mailbox_modified', $username)
+              );
+              continue;
+            }
             $lowspamlevel	= explode(',', $_data['spam_score'])[0];
             $highspamlevel	= explode(',', $_data['spam_score'])[1];
             if (!is_numeric($lowspamlevel) || !is_numeric($highspamlevel)) {
               $_SESSION['return'][] = array(
                 'type' => 'danger',
                 'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
-                'msg' => 'access_denied'
+                'msg' => 'Invalid spam score, format must be "1,2" where first is low and second is high spam value.'
               );
               continue;
             }
@@ -1213,12 +1228,15 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
               );
               continue;
             }
-            $stmt = $pdo->prepare("UPDATE `spamalias` SET `validity` = (`validity` + 3600) WHERE 
-              `address` = :address AND
-              `validity` >= :validity");
+            if (empty($_data['validity'])) {
+              continue;
+            }
+            $validity = round((int)time() + ($_data['validity'] * 3600));
+            $stmt = $pdo->prepare("UPDATE `spamalias` SET `validity` = :validity WHERE 
+              `address` = :address");
             $stmt->execute(array(
               ':address' => $address,
-              ':validity' => time()
+              ':validity' => $validity
             ));
             $_SESSION['return'][] = array(
               'type' => 'success',
@@ -1865,6 +1883,7 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
             if (!empty($is_now)) {
               $active     = (isset($_data['active'])) ? intval($_data['active']) : $is_now['active_int'];
               (int)$force_pw_update = (isset($_data['force_pw_update'])) ? intval($_data['force_pw_update']) : intval($is_now['attributes']['force_pw_update']);
+              (int)$sogo_access = (isset($_data['sogo_access'])) ? intval($_data['sogo_access']) : intval($is_now['attributes']['sogo_access']);
               $name       = (!empty($_data['name'])) ? $_data['name'] : $is_now['name'];
               $domain     = $is_now['domain'];
               $quota_m    = (!empty($_data['quota'])) ? $_data['quota'] : ($is_now['quota'] / 1048576);
@@ -2066,13 +2085,15 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
                 `active` = :active,
                 `name`= :name,
                 `quota` = :quota_b,
-                `attributes` = JSON_SET(`attributes`, '$.force_pw_update', :force_pw_update)
+                `attributes` = JSON_SET(`attributes`, '$.force_pw_update', :force_pw_update),
+                `attributes` = JSON_SET(`attributes`, '$.sogo_access', :sogo_access)
                   WHERE `username` = :username");
             $stmt->execute(array(
               ':active' => $active,
               ':name' => $name,
               ':quota_b' => $quota_b,
               ':force_pw_update' => $force_pw_update,
+              ':sogo_access' => $sogo_access,
               ':username' => $username
             ));
             $_SESSION['return'][] = array(
@@ -2368,20 +2389,23 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
             $_data = $_SESSION['mailcow_cc_username'];
           }
           $exec_fields = array(
-            'cmd' => 'sieve_list',
+            'cmd' => 'sieve',
+            'task' => 'list',
             'username' => $_data
           );
-          $filters = json_decode(docker('post', 'dovecot-mailcow', 'exec', $exec_fields), true);
-          $filters = array_filter(explode(PHP_EOL, $filters));
+          $filters = docker('post', 'dovecot-mailcow', 'exec', $exec_fields);
+          $filters = array_filter(preg_split("/(\r\n|\n|\r)/",$filters));
           foreach ($filters as $filter) {
             if (preg_match('/.+ ACTIVE/i', $filter)) {
               $exec_fields = array(
-                'cmd' => 'sieve_print',
+                'cmd' => 'sieve',
+                'task' => 'print',
                 'script_name' => substr($filter, 0, -7),
                 'username' => $_data
               );
-              $filters = json_decode(docker('post', 'dovecot-mailcow', 'exec', $exec_fields), true);
-              return preg_replace('/^.+\n/', '', $filters);
+              $script = docker('post', 'dovecot-mailcow', 'exec', $exec_fields);
+              // Remove first line
+              return preg_replace('/^.+\n/', '', $script);
             }
           }
           return false;
@@ -2452,7 +2476,47 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
           return $syncjobdata;
         break;
         case 'spam_score':
-          $default = "5, 15";
+          $curl = curl_init();
+          curl_setopt($curl, CURLOPT_UNIX_SOCKET_PATH, '/var/lib/rspamd/rspamd.sock');
+          curl_setopt($curl, CURLOPT_URL,"http://rspamd/actions");
+          curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+          $default_actions = curl_exec($curl);
+          if (!curl_errno($curl)) {
+            $data_array = json_decode($default_actions, true);
+            curl_close($curl);
+            foreach ($data_array as $data) {
+              if ($data['action'] == 'reject') {
+                $reject = $data['value'];
+                continue;
+              }
+              elseif ($data['action'] == 'add header') {
+                $add_header = $data['value'];
+                continue;
+              }
+            }
+            if (empty($add_header) || empty($reject)) {
+              // Assume default, set warning
+              $default = "5, 15";
+              $_SESSION['return'][] = array(
+                'type' => 'warning',
+                'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
+                'msg' => 'Could not determine servers default spam score, assuming default'
+              );
+            }
+            else {
+              $default = $add_header . ', ' . $reject;
+            }
+          }
+          else {
+            // Assume default, set warning
+            $default = "5, 15";
+            $_SESSION['return'][] = array(
+              'type' => 'warning',
+              'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
+              'msg' => 'Could not determine servers default spam score, assuming default'
+            );
+          }
+          curl_close($curl);
           $policydata = array();
           if (isset($_data) && filter_var($_data, FILTER_VALIDATE_EMAIL)) {
             if (!hasMailboxObjectAccess($_SESSION['mailcow_cc_username'], $_SESSION['mailcow_cc_role'], $_data)) {
@@ -3025,6 +3089,66 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
             );
           }
         break;
+        case 'sogo_profile':
+          if (!is_array($_data['username'])) {
+            $usernames = array();
+            $usernames[] = $_data['username'];
+          }
+          else {
+            $usernames = $_data['username'];
+          }
+          if (!isset($_SESSION['acl']['sogo_profile_reset']) || $_SESSION['acl']['sogo_profile_reset'] != "1" ) {
+            $_SESSION['return'][] = array(
+              'type' => 'danger',
+              'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
+              'msg' => 'access_denied'
+            );
+            return false;
+          }
+          foreach ($usernames as $username) {
+            if (!hasMailboxObjectAccess($_SESSION['mailcow_cc_username'], $_SESSION['mailcow_cc_role'], $username)) {
+              $_SESSION['return'][] = array(
+                'type' => 'danger',
+                'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
+                'msg' => 'access_denied'
+              );
+              continue;
+            }
+            $stmt = $pdo->prepare("DELETE FROM `sogo_user_profile` WHERE `c_uid` = :username");
+            $stmt->execute(array(
+              ':username' => $username
+            ));
+            $stmt = $pdo->prepare("DELETE FROM `sogo_cache_folder` WHERE `c_uid` = :username");
+            $stmt->execute(array(
+              ':username' => $username
+            ));
+            $stmt = $pdo->prepare("DELETE FROM `sogo_acl` WHERE `c_object` LIKE '%/" . $username . "/%' OR `c_uid` = :username");
+            $stmt->execute(array(
+              ':username' => $username
+            ));
+            $stmt = $pdo->prepare("DELETE FROM `sogo_store` WHERE `c_folder_id` IN (SELECT `c_folder_id` FROM `sogo_folder_info` WHERE `c_path2` = :username)");
+            $stmt->execute(array(
+              ':username' => $username
+            ));
+            $stmt = $pdo->prepare("DELETE FROM `sogo_quick_contact` WHERE `c_folder_id` IN (SELECT `c_folder_id` FROM `sogo_folder_info` WHERE `c_path2` = :username)");
+            $stmt->execute(array(
+              ':username' => $username
+            ));
+            $stmt = $pdo->prepare("DELETE FROM `sogo_quick_appointment` WHERE `c_folder_id` IN (SELECT `c_folder_id` FROM `sogo_folder_info` WHERE `c_path2` = :username)");
+            $stmt->execute(array(
+              ':username' => $username
+            ));
+            $stmt = $pdo->prepare("DELETE FROM `sogo_folder_info` WHERE `c_path2` = :username");
+            $stmt->execute(array(
+              ':username' => $username
+            ));
+            $_SESSION['return'][] = array(
+              'type' => 'success',
+              'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
+              'msg' => array('sogo_profile_reset', htmlspecialchars($username))
+            );
+          }
+        break;
         case 'domain':
           if (!is_array($_data['domain'])) {
             $domains = array();
@@ -3063,7 +3187,7 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
               );
               continue;
             }
-            $exec_fields = array('cmd' => 'maildir_cleanup', 'maildir' => $domain);
+            $exec_fields = array('cmd' => 'maildir', 'task' => 'cleanup', 'maildir' => $domain);
             $maildir_gc = json_decode(docker('post', 'dovecot-mailcow', 'exec', $exec_fields), true);
             if ($maildir_gc['type'] != 'success') {
               $_SESSION['return'][] = array(
@@ -3246,7 +3370,7 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
               continue;
             }
             $maildir = mailbox('get', 'mailbox_details', $username)['maildir'];
-            $exec_fields = array('cmd' => 'maildir_cleanup', 'maildir' => $maildir);
+            $exec_fields = array('cmd' => 'maildir', 'task' => 'cleanup', 'maildir' => $maildir);
             $maildir_gc = json_decode(docker('post', 'dovecot-mailcow', 'exec', $exec_fields), true);
             if ($maildir_gc['type'] != 'success') {
               $_SESSION['return'][] = array(
