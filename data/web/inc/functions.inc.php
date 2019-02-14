@@ -394,6 +394,7 @@ function verify_hash($hash, $password) {
 function check_login($user, $pass) {
 	global $pdo;
 	global $redis;
+	global $imap_server;
 	if (!filter_var($user, FILTER_VALIDATE_EMAIL) && !ctype_alnum(str_replace(array('_', '.', '-'), '', $user))) {
     $_SESSION['return'][] =  array(
       'type' => 'danger',
@@ -405,6 +406,7 @@ function check_login($user, $pass) {
 	$user = strtolower(trim($user));
 	$stmt = $pdo->prepare("SELECT `password` FROM `admin`
 			WHERE `superadmin` = '1'
+			AND `active` = '1'
 			AND `username` = :user");
 	$stmt->execute(array(':user' => $user));
 	$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -523,7 +525,8 @@ function update_sogo_static_view() {
     WHERE TABLE_NAME = 'sogo_view'");
   $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
   if ($num_results != 0) {
-    $stmt = $pdo->query("REPLACE INTO _sogo_static_view SELECT * from sogo_view");
+    $stmt = $pdo->query("REPLACE INTO _sogo_static_view (`c_uid`, `domain`, `c_name`, `c_password`, `c_cn`, `mail`, `aliases`, `ad_aliases`, `kind`, `multiple_bookings`)
+      SELECT `c_uid`, `domain`, `c_name`, `c_password`, `c_cn`, `mail`, `aliases`, `ad_aliases`, `kind`, `multiple_bookings` from sogo_view");
     $stmt = $pdo->query("DELETE FROM _sogo_static_view WHERE `c_uid` NOT IN (SELECT `username` FROM `mailbox` WHERE `active` = '1');");
   }
   flush_memcached();
@@ -609,6 +612,8 @@ function edit_user_account($_data) {
 function user_get_alias_details($username) {
 	global $lang;
 	global $pdo;
+  $data['direct_aliases'] = false;
+  $data['shared_aliases'] = false;
   if ($_SESSION['mailcow_cc_role'] == "user") {
     $username	= $_SESSION['mailcow_cc_username'];
   }
@@ -616,7 +621,7 @@ function user_get_alias_details($username) {
     return false;
   }
   $data['address'] = $username;
-  $stmt = $pdo->prepare("SELECT IFNULL(GROUP_CONCAT(`address` SEPARATOR ', '), '&#10008;') AS `shared_aliases` FROM `alias`
+  $stmt = $pdo->prepare("SELECT `address` AS `shared_aliases`, `public_comment` FROM `alias`
     WHERE `goto` REGEXP :username_goto
     AND `address` NOT LIKE '@%'
     AND `goto` != :username_goto2
@@ -628,9 +633,12 @@ function user_get_alias_details($username) {
     ));
   $run = $stmt->fetchAll(PDO::FETCH_ASSOC);
   while ($row = array_shift($run)) {
-    $data['shared_aliases'] = $row['shared_aliases'];
+    $data['shared_aliases'][$row['shared_aliases']]['public_comment'] = htmlspecialchars($row['public_comment']);
+
+    //$data['shared_aliases'][] = $row['shared_aliases'];
   }
-  $stmt = $pdo->prepare("SELECT GROUP_CONCAT(`address` SEPARATOR ', ') AS `direct_aliases` FROM `alias`
+
+  $stmt = $pdo->prepare("SELECT `address` AS `direct_aliases`, `public_comment` FROM `alias`
     WHERE `goto` = :username_goto
     AND `address` NOT LIKE '@%'
     AND `address` != :username_address");
@@ -638,21 +646,22 @@ function user_get_alias_details($username) {
     array(
     ':username_goto' => $username,
     ':username_address' => $username
-    ));
+  ));
   $run = $stmt->fetchAll(PDO::FETCH_ASSOC);
   while ($row = array_shift($run)) {
-    $data['direct_aliases'][] = $row['direct_aliases'];
+    $data['direct_aliases'][$row['direct_aliases']]['public_comment'] = htmlspecialchars($row['public_comment']);
   }
-  $stmt = $pdo->prepare("SELECT GROUP_CONCAT(local_part, '@', alias_domain SEPARATOR ', ') AS `ad_alias` FROM `mailbox`
+  $stmt = $pdo->prepare("SELECT CONCAT(local_part, '@', alias_domain) AS `ad_alias`, `alias_domain` FROM `mailbox`
     LEFT OUTER JOIN `alias_domain` on `target_domain` = `domain`
       WHERE `username` = :username ;");
   $stmt->execute(array(':username' => $username));
   $run = $stmt->fetchAll(PDO::FETCH_ASSOC);
   while ($row = array_shift($run)) {
-    $data['direct_aliases'][] = $row['ad_alias'];
+    if (empty($row['ad_alias'])) {
+      continue;
+    }
+    $data['direct_aliases'][$row['ad_alias']]['public_comment'] = '↪ ' . $row['alias_domain'];
   }
-  $data['direct_aliases'] = implode(', ', array_filter($data['direct_aliases']));
-  $data['direct_aliases'] = empty($data['direct_aliases']) ? '&#10008;' : $data['direct_aliases'];
   $stmt = $pdo->prepare("SELECT IFNULL(GROUP_CONCAT(`send_as` SEPARATOR ', '), '&#10008;') AS `send_as` FROM `sender_acl` WHERE `logged_in_as` = :username AND `send_as` NOT LIKE '@%';");
   $stmt->execute(array(':username' => $username));
   $run = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -677,7 +686,7 @@ function is_valid_domain_name($domain_name) {
 	if (empty($domain_name)) {
 		return false;
 	}
-	$domain_name = idn_to_ascii($domain_name);
+	$domain_name = idn_to_ascii($domain_name, 0, INTL_IDNA_VARIANT_UTS46);
 	return (preg_match("/^([a-z\d](-*[a-z\d])*)(\.([a-z\d](-*[a-z\d])*))*$/i", $domain_name)
 		   && preg_match("/^.{1,253}$/", $domain_name)
 		   && preg_match("/^[^\.]{1,63}(\.[^\.]{1,63})*$/", $domain_name));
@@ -1261,7 +1270,7 @@ function get_u2f_registrations($username) {
   $sel->execute(array($username));
   return $sel->fetchAll(PDO::FETCH_OBJ);
 }
-function get_logs($container, $lines = false) {
+function get_logs($application, $lines = false) {
   if ($lines === false) {
     $lines = $GLOBALS['LOG_LINES'] - 1; 
   }
@@ -1281,7 +1290,7 @@ function get_logs($container, $lines = false) {
 		return false;
 	}
   // SQL
-  if ($container == "mailcow-ui") {
+  if ($application == "mailcow-ui") {
     if (isset($from) && isset($to)) {
       $stmt = $pdo->prepare("SELECT * FROM `logs` ORDER BY `id` DESC LIMIT :from, :to");
       $stmt->execute(array(
@@ -1302,7 +1311,7 @@ function get_logs($container, $lines = false) {
     }
   }
   // Redis
-  if ($container == "dovecot-mailcow") {
+  if ($application == "dovecot-mailcow") {
     if (isset($from) && isset($to)) {
       $data = $redis->lRange('DOVECOT_MAILLOG', $from - 1, $to - 1);
     }
@@ -1316,7 +1325,7 @@ function get_logs($container, $lines = false) {
       return $data_array;
     }
   }
-  if ($container == "postfix-mailcow") {
+  if ($application == "postfix-mailcow") {
     if (isset($from) && isset($to)) {
       $data = $redis->lRange('POSTFIX_MAILLOG', $from - 1, $to - 1);
     }
@@ -1330,7 +1339,7 @@ function get_logs($container, $lines = false) {
       return $data_array;
     }
   }
-  if ($container == "sogo-mailcow") {
+  if ($application == "sogo-mailcow") {
     if (isset($from) && isset($to)) {
       $data = $redis->lRange('SOGO_LOG', $from - 1, $to - 1);
     }
@@ -1344,7 +1353,7 @@ function get_logs($container, $lines = false) {
       return $data_array;
     }
   }
-  if ($container == "watchdog-mailcow") {
+  if ($application == "watchdog-mailcow") {
     if (isset($from) && isset($to)) {
       $data = $redis->lRange('WATCHDOG_LOG', $from - 1, $to - 1);
     }
@@ -1358,7 +1367,7 @@ function get_logs($container, $lines = false) {
       return $data_array;
     }
   }
-  if ($container == "acme-mailcow") {
+  if ($application == "acme-mailcow") {
     if (isset($from) && isset($to)) {
       $data = $redis->lRange('ACME_LOG', $from - 1, $to - 1);
     }
@@ -1372,7 +1381,21 @@ function get_logs($container, $lines = false) {
       return $data_array;
     }
   }
-  if ($container == "api-mailcow") {
+  if ($application == "ratelimited") {
+    if (isset($from) && isset($to)) {
+      $data = $redis->lRange('RL_LOG', $from - 1, $to - 1);
+    }
+    else {
+      $data = $redis->lRange('RL_LOG', 0, $lines);
+    }
+    if ($data) {
+      foreach ($data as $json_line) {
+        $data_array[] = json_decode($json_line, true);
+      }
+      return $data_array;
+    }
+  }
+  if ($application == "api-mailcow") {
     if (isset($from) && isset($to)) {
       $data = $redis->lRange('API_LOG', $from - 1, $to - 1);
     }
@@ -1386,7 +1409,7 @@ function get_logs($container, $lines = false) {
       return $data_array;
     }
   }
-  if ($container == "netfilter-mailcow") {
+  if ($application == "netfilter-mailcow") {
     if (isset($from) && isset($to)) {
       $data = $redis->lRange('NETFILTER_LOG', $from - 1, $to - 1);
     }
@@ -1400,7 +1423,7 @@ function get_logs($container, $lines = false) {
       return $data_array;
     }
   }
-  if ($container == "autodiscover-mailcow") {
+  if ($application == "autodiscover-mailcow") {
     if (isset($from) && isset($to)) {
       $data = $redis->lRange('AUTODISCOVER_LOG', $from - 1, $to - 1);
     }
@@ -1414,7 +1437,7 @@ function get_logs($container, $lines = false) {
       return $data_array;
     }
   }
-  if ($container == "rspamd-history") {
+  if ($application == "rspamd-history") {
     $curl = curl_init();
     curl_setopt($curl, CURLOPT_UNIX_SOCKET_PATH, '/var/lib/rspamd/rspamd.sock');
     if (!is_numeric($lines)) {
@@ -1433,6 +1456,45 @@ function get_logs($container, $lines = false) {
     }
     curl_close($curl);
     return false;
+  }
+  return false;
+}
+function getGUID() {
+  if (function_exists('com_create_guid')) {
+    return com_create_guid();
+  }
+  mt_srand((double)microtime()*10000);//optional for php 4.2.0 and up.
+  $charid = strtoupper(md5(uniqid(rand(), true)));
+  $hyphen = chr(45);// "-"
+  return substr($charid, 0, 8).$hyphen
+        .substr($charid, 8, 4).$hyphen
+        .substr($charid,12, 4).$hyphen
+        .substr($charid,16, 4).$hyphen
+        .substr($charid,20,12);
+}
+function solr_status() {
+  $curl = curl_init();
+  $endpoint = 'http://solr:8983/solr/admin/cores';
+  $params = array(
+    'action' => 'STATUS',
+    'core' => 'dovecot',
+    'indexInfo' => 'true'
+  );
+  $url = $endpoint . '?' . http_build_query($params);
+  curl_setopt($curl, CURLOPT_URL, $url);
+  curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+  curl_setopt($curl, CURLOPT_POST, 0);
+  curl_setopt($curl, CURLOPT_TIMEOUT, 20);
+  $response = curl_exec($curl);
+  if ($response === false) {
+    $err = curl_error($curl);
+    curl_close($curl);
+    return false;
+  }
+  else {
+    curl_close($curl);
+    $status = json_decode($response, true);
+    return (!empty($status['status']['dovecot'])) ? $status['status']['dovecot'] : false;
   }
   return false;
 }

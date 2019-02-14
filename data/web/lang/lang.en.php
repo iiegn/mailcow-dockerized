@@ -3,6 +3,7 @@
  * English language file
  */
 
+$lang['header']['apps'] = 'Apps';
 $lang['footer']['loading'] = "Please wait...";
 $lang['header']['restart_sogo'] = 'Restart SOGo';
 $lang['header']['restart_netfilter'] = 'Restart netfilter';
@@ -29,6 +30,11 @@ $lang['success']['verified_u2f_login'] = "Verified U2F login";
 $lang['success']['verified_yotp_login'] = "Verified Yubico OTP login";
 $lang['danger']['yotp_verification_failed'] = "Yubico OTP verification failed: %s";
 $lang['danger']['ip_list_empty'] = "List of allowed IPs cannot be empty";
+$lang['danger']['invalid_destination'] = "Destination format is invalid";
+$lang['danger']['invalid_nexthop'] = "Next hop format is invalid";
+$lang['danger']['invalid_nexthop_authenticated'] = "Next hops exists with different credentials, please update the existing credentials for this next hop first.";
+$lang['danger']['next_hop_interferes'] = "%s interferes with nexthop %s";
+$lang['danger']['next_hop_interferes_any'] = "An existing next hop interferes with %s";
 $lang['danger']['rspamd_ui_pw_length'] = "Rspamd UI password should be at least 6 chars long";
 $lang['success']['rspamd_ui_pw_set'] = "Rspamd UI password successfully set";
 $lang['success']['queue_command_success'] = "Queue command completed successfully";
@@ -63,9 +69,9 @@ $lang['danger']['private_key_error'] = "Private key error: %s";
 $lang['danger']['map_content_empty'] = "Map content cannot be empty";
 $lang['success']['settings_map_added'] = "Added settings map entry";
 $lang['danger']['settings_map_invalid'] = "Settings map ID %s invalid";
-$lang['danger']['settings_map_removed'] = "Removed settings map deleted: %s";
+$lang['success']['settings_map_removed'] = "Removed settings map ID %s";
 $lang['danger']['invalid_host'] = "Invalid host specified: %s";
-$lang['danger']['relayhost_invalid'] = "Relayhost %s is invalid";
+$lang['danger']['relayhost_invalid'] = "Map entry %s is invalid";
 $lang['success']['saved_settings'] = "Saved settings";
 $lang['success']['db_init_complete'] = "Database initialization completed";
 
@@ -252,9 +258,12 @@ $lang['start']['imap_smtp_server_auth_info'] = 'Please use your full email addre
 Your login data will be encrypted by the server-side mandatory encryption.';
 $lang['start']['help'] = 'Show/Hide help panel';
 $lang['header']['mailcow_settings'] = 'Configuration';
-$lang['header']['administration'] = 'Administration';
-$lang['header']['mailboxes'] = 'Mailboxes';
-$lang['header']['user_settings'] = 'User settings';
+$lang['header']['administration'] = 'Configuration & Details';
+$lang['header']['mailboxes'] = 'Mail Setup';
+$lang['header']['user_settings'] = 'User Settings';
+$lang['header']['quarantine'] = "Quarantine";
+$lang['header']['debug'] = "System Information";
+$lang['quarantine']['disabled_by_config'] = "The current system configuration disables the quarantine functionality.";
 $lang['mailbox']['tls_policy_maps'] = 'TLS policy maps';
 $lang['mailbox']['tls_policy_maps_long'] = 'Outgoing TLS policy map overrides';
 $lang['mailbox']['tls_policy_maps_info'] = 'This policy map overrides outgoing TLS transport rules independently of a users TLS policy settings.<br>
@@ -280,8 +289,10 @@ $lang['mailbox']['description'] = 'Description';
 $lang['mailbox']['alias'] = 'Alias';
 $lang['mailbox']['aliases'] = 'Aliases';
 $lang['mailbox']['domains'] = 'Domains';
+$lang['admin']['domain'] = 'Domain';
 $lang['admin']['domain_s'] = 'Domain/s';
 $lang['mailbox']['mailboxes'] = 'Mailboxes';
+$lang['mailbox']['mailbox'] = 'Mailbox';
 $lang['mailbox']['resources'] = 'Resources';
 $lang['mailbox']['mailbox_quota'] = 'Max. size of a mailbox';
 $lang['mailbox']['domain_quota'] = 'Quota';
@@ -347,6 +358,8 @@ $lang['edit']['max_mailboxes'] = 'Max. possible mailboxes';
 $lang['edit']['title'] = 'Edit object';
 $lang['edit']['target_address'] = 'Goto address/es <small>(comma-separated)</small>';
 $lang['edit']['active'] = 'Active';
+$lang['edit']['gal'] = 'Global Address List';
+$lang['edit']['gal_info'] = 'The GAL contains all objects of a domain and cannot be edited by any user. <b>Restart SOGo to apply changes.</b>';
 $lang['edit']['force_pw_update'] = 'Force password update at next login';
 $lang['edit']['force_pw_update_info'] = 'This user will only be able to login to mailcow UI.';
 $lang['edit']['sogo_access'] = 'Grant access to SOGo';
@@ -379,7 +392,15 @@ $lang['edit']['dont_check_sender_acl'] = "Disable sender check for domain %s (+ 
 $lang['edit']['multiple_bookings'] = 'Multiple bookings';
 $lang['edit']['kind'] = 'Kind';
 $lang['edit']['resource'] = 'Resource';
-
+$lang['edit']['relayhost'] = 'Sender-dependent transports';
+$lang['edit']['public_comment'] = 'Public comment';
+$lang['mailbox']['public_comment'] = 'Public comment';
+$lang['edit']['private_comment'] = 'Private comment';
+$lang['mailbox']['private_comment'] = 'Private comment';
+$lang['edit']['comment_info'] = 'A private comment is not visible to the user, while a public comment is shown as tooltip when hovering it in a users overview';
+$lang['add']['public_comment'] = 'Public comment';
+$lang['add']['private_comment'] = 'Private comment';
+$lang['add']['comment_info'] = 'A private comment is not visible to the user, while a public comment is shown as tooltip when hovering it in a users overview';
 $lang['acl']['spam_alias'] = 'Temporary aliases';
 $lang['acl']['tls_policy'] = 'TLS policy';
 $lang['acl']['spam_score'] = 'Spam score';
@@ -388,7 +409,10 @@ $lang['acl']['delimiter_action'] = 'Delimiter action';
 $lang['acl']['syncjobs'] = 'Sync jobs';
 $lang['acl']['eas_reset'] = 'Reset EAS devices';
 $lang['acl']['sogo_profile_reset'] = 'Reset SOGo profile';
-$lang['acl']['quarantine'] = 'Quarantine';
+$lang['acl']['quarantine'] = 'Quarantine actions';
+$lang['acl']['quarantine_notification'] = 'Quarantine notifications';
+$lang['acl']['quarantine_attachments'] = 'Quarantine attachments';
+$lang['acl']['alias_domains'] = 'Add alias domains';
 $lang['acl']['login_as'] = 'Login as mailbox user';
 $lang['acl']['bcc_maps'] = 'BCC maps';
 $lang['acl']['filters'] = 'Filters';
@@ -396,10 +420,25 @@ $lang['acl']['ratelimit'] = 'Rate limit';
 $lang['acl']['recipient_maps'] = 'Recipient maps';
 $lang['acl']['prohibited'] = 'Prohibited by ACL';
 
+$lang['mailbox']['quarantine_notification'] = 'Quarantine notifications';
+$lang['mailbox']['never'] = 'Never';
+$lang['mailbox']['hourly'] = 'Hourly';
+$lang['mailbox']['daily'] = 'Daily';
+$lang['mailbox']['weekly'] = 'Weekly';
+$lang['user']['quarantine_notification'] = 'Quarantine notifications';
+$lang['user']['never'] = 'Never';
+$lang['user']['hourly'] = 'Hourly';
+$lang['user']['daily'] = 'Daily';
+$lang['user']['weekly'] = 'Weekly';
+$lang['user']['quarantine_notification_info'] = 'Once a notification has been sent, items will be marked as "notified" and no further notifications will be sent for this particular item.';
+
 $lang['add']['generate'] = 'generate';
 $lang['add']['syncjob'] = 'Add sync job';
 $lang['add']['syncjob_hint'] = 'Be aware that passwords need to be saved plain-text!';
-$lang['add']['hostname'] = 'Hostname';
+$lang['add']['hostname'] = 'Host';
+$lang['add']['destination'] = 'Destination';
+$lang['add']['nexthop'] = 'Next hop';
+$lang['edit']['nexthop'] = 'Next hop';
 $lang['add']['port'] = 'Port';
 $lang['add']['username'] = 'Username';
 $lang['add']['enc_method'] = 'Encryption method';
@@ -412,6 +451,8 @@ $lang['add']['custom_params'] = 'Custom parameters';
 $lang['add']['subscribeall'] = 'Subscribe all folders';
 $lang['add']['timeout1'] = 'Timeout for connection to remote host';
 $lang['add']['timeout2'] = 'Timeout for connection to local host';
+$lang['edit']['timeout1'] = 'Timeout for connection to remote host';
+$lang['edit']['timeout2'] = 'Timeout for connection to local host';
 
 $lang['edit']['delete2duplicates'] = 'Delete duplicates on destination';
 $lang['edit']['delete1'] = 'Delete from source when completed';
@@ -493,6 +534,7 @@ $lang['admin']['rspamd-com_settings'] = '<a href="https://rspamd.com/doc/configu
   - A setting name will be auto-generated, please see the example presets below.';
 
 $lang['admin']['no_new_rows'] = 'No further rows available';
+$lang['admin']['queue_manager'] = 'Queue manager';
 $lang['admin']['additional_rows'] = ' additional rows were added'; // parses to 'n additional rows were added'
 $lang['admin']['private_key'] = 'Private key';
 $lang['admin']['import'] = 'Import';
@@ -522,7 +564,9 @@ $lang['admin']['dkim_key_unused'] = 'Key unused';
 $lang['admin']['dkim_key_missing'] = 'Key missing';
 $lang['admin']['dkim_add_key'] = 'Add ARC/DKIM key';
 $lang['admin']['dkim_keys'] = 'ARC/DKIM keys';
+$lang['admin']['dkim_private_key'] = 'Private key';
 $lang['admin']['dkim_domains_wo_keys'] = "Select domains with missing keys";
+$lang['admin']['dkim_domains_selector'] = "Selector";
 $lang['admin']['add'] = 'Add';
 $lang['add']['add_domain_restart'] = 'Add domain and restart SOGo';
 $lang['add']['add_domain_only'] = 'Add domain only';
@@ -552,6 +596,9 @@ $lang['admin']['admin_domains'] = 'Domain assignments';
 $lang['admin']['domain_admins'] = 'Domain administrators';
 $lang['admin']['flush_queue'] = 'Flush queue';
 $lang['admin']['delete_queue'] = 'Delete all';
+$lang['admin']['queue_deliver_mail'] = 'Deliver';
+$lang['admin']['queue_hold_mail'] = 'Hold';
+$lang['admin']['queue_unhold_mail'] = 'Unhold';
 $lang['admin']['username'] = 'Username';
 $lang['admin']['edit'] = 'Edit';
 $lang['admin']['remove'] = 'Remove';
@@ -566,24 +613,46 @@ $lang['admin']['no_record'] = 'No record';
 $lang['admin']['filter_table'] = 'Filter table';
 $lang['admin']['empty'] = 'No results';
 $lang['admin']['time'] = 'Time';
+$lang['admin']['last_applied'] = 'Last applied';
+$lang['admin']['reset_limit'] = 'Remove hash';
+$lang['admin']['hash_remove_info'] = 'Removing a ratelimit hash (if still existing) will reset its counter completely.<br>
+  Each hash is indicated by an individual color.';
+$lang['warning']['hash_not_found'] = 'Hash not found';
+$lang['success']['hash_deleted'] = 'Hash deleted';
+$lang['admin']['authed_user'] = 'Auth. user';
 $lang['admin']['priority'] = 'Priority';
 $lang['admin']['message'] = 'Message';
+$lang['admin']['rate_name'] = 'Rate name';
 $lang['admin']['refresh'] = 'Refresh';
 $lang['admin']['to_top'] = 'Back to top';
 $lang['admin']['in_use_by'] = 'In use by';
 $lang['admin']['forwarding_hosts'] = 'Forwarding Hosts';
 $lang['admin']['forwarding_hosts_hint'] = 'Incoming messages are unconditionally accepted from any hosts listed here. These hosts are then not checked against DNSBLs or subjected to greylisting. Spam received from them is never rejected, but optionally it can be filed into the Junk folder. The most common use for this is to specify mail servers on which you have set up a rule that forwards incoming emails to your mailcow server.';
 $lang['admin']['forwarding_hosts_add_hint'] = 'You can either specify IPv4/IPv6 addresses, networks in CIDR notation, host names (which will be resolved to IP addresses), or domain names (which will be resolved to IP addresses by querying SPF records or, in their absence, MX records).';
-$lang['admin']['relayhosts_hint'] = 'Define relayhosts here to be able to select them in a domains configuration dialog.';
-$lang['admin']['add_relayhost_add_hint'] = 'Please be aware that relayhost authentication data will be stored as plain text.';
+$lang['admin']['relayhosts_hint'] = 'Define sender-dependent transports to be able to select them in a domains configuration dialog.<br>
+  The transport service is always "smtp:". A users individual outbound TLS policy setting is taken into account.';
+$lang['admin']['transports_hint'] = 'A transport map entry <b>overrules</b> a sender-dependent transport map</b>.<br>
+Outbound TLS policy settings per-user are ignored and can only be enfored by TLS policy map entries. The transport service is always "smtp:".<br>
+To determine credentials for an exemplary next hop "[host]:25", Postfix <b>always</b> queries for "nexthop" before searching for "[nexthop]:25". This behavior makes it impossible to use "nexthop" and "[nexthop]:25" at the same time.';
+$lang['admin']['add_relayhost_hint'] = 'Please be aware that authentication data, if any, will be stored as plain text.';
+$lang['admin']['add_transports_hint'] = 'Please be aware that authentication data, if any, will be stored as plain text.';
 $lang['admin']['host'] = 'Host';
 $lang['admin']['source'] = 'Source';
-$lang['admin']['add_forwarding_host'] = 'Add Forwarding Host';
-$lang['admin']['add_relayhost'] = 'Add Relayhost';
+$lang['admin']['add_forwarding_host'] = 'Add forwarding host';
+$lang['admin']['add_relayhost'] = 'Add sender-dependent transport';
+$lang['admin']['add_transport'] = 'Add transport';
+$lang['admin']['relayhosts'] = 'Sender-dependent transports';
+$lang['admin']['transport_maps'] = 'Transport Maps';
+$lang['admin']['routing'] = 'Routing';
+$lang['admin']['credentials_transport_warning'] = '<b>Warning</b>: Adding a new transport map entry will update the credentials for all entries with a matching nexthop column.';
+
+$lang['admin']['destination'] = 'Destination';
+$lang['admin']['nexthop'] = 'Next hop';
+
 $lang['success']['forwarding_host_removed'] = "Forwarding host %s has been removed";
 $lang['success']['forwarding_host_added'] = "Forwarding host %s has been added";
-$lang['success']['relayhost_removed'] = "Relayhost %s has been removed";
-$lang['success']['relayhost_added'] = "Relayhost %s has been added";
+$lang['success']['relayhost_removed'] = "Map entry %s has been removed";
+$lang['success']['relayhost_added'] = "Map entry %s has been added";
 $lang['diagnostics']['dns_records'] = 'DNS Records';
 $lang['diagnostics']['dns_records_24hours'] = 'Please note that changes made to DNS may take up to 24 hours to correctly have their current state reflected on this page. It is intended as a way for you to easily see how to configure your DNS records and to check whether all your records are correctly stored in DNS.';
 $lang['diagnostics']['dns_records_name'] = 'Name';
@@ -605,10 +674,23 @@ $lang['admin']['queue_unban'] = "queue unban";
 $lang['admin']['no_active_bans'] = "No active bans";
 
 $lang['admin']['quarantine'] = "Quarantine";
-$lang['admin']['quarantine_retention_size'] = "Retentions per mailbox<br />0 indicates <b>inactive</b>!";
-$lang['admin']['quarantine_max_size'] = "Maximum size in MiB (larger elements are discarded)<br />0 does <b>not</b> indicate unlimited!";
-$lang['admin']['quarantine_exclude_domains'] = "Exclude domains and alias-domains:";
-
+$lang['admin']['rspamd_settings_map'] = "Rspamd settings map";
+$lang['admin']['quota_notifications'] = "Quota notifications";
+$lang['admin']['quota_notifications_vars'] = "{{percent}} equals the current quota of the user<br>{{username}} is the mailbox name";
+$lang['admin']['active_rspamd_settings_map'] = "Active settings map";
+$lang['admin']['quota_notifications_info'] = "Quota notications are sent to users once when crossing 80% and once when crossing 95% usage.";
+$lang['admin']['quarantine_retention_size'] = "Retentions per mailbox:<br><small>0 indicates <b>inactive</b>.</small>";
+$lang['admin']['quarantine_max_size'] = "Maximum size in MiB (larger elements are discarded):<br><small>0 does <b>not</b> indicate unlimited.</small>";
+$lang['admin']['quarantine_exclude_domains'] = "Exclude domains and alias-domains";
+$lang['admin']['quarantine_release_format'] = "Format of released items";
+$lang['admin']['quarantine_release_format_raw'] = "Unmodified original";
+$lang['admin']['quarantine_release_format_att'] = "As attachment";
+$lang['admin']['quarantine_notification_sender'] = "Notification email sender";
+$lang['admin']['quarantine_notification_subject'] = "Notification email subject";
+$lang['admin']['quarantine_notification_html'] = "Notification email template:<br><small>Leave empty to restore default template.</small>";
+$lang['admin']['quota_notification_sender'] = "Notification email sender";
+$lang['admin']['quota_notification_subject'] = "Notification email subject";
+$lang['admin']['quota_notification_html'] = "Notification email template:<br><small>Leave empty to restore default template.</small>";
 $lang['admin']['ui_texts'] = "UI labels and texts";
 $lang['admin']['help_text'] = "Override help text below login mask (HTML allowed)";
 $lang['admin']['title_name'] = '"mailcow UI" website title';
@@ -629,12 +711,15 @@ $lang['admin']['merged_vars_hint'] = 'Greyed out rows were merged from <code>var
 $lang['mailbox']['waiting'] = "Waiting";
 $lang['mailbox']['status'] = "Status";
 $lang['mailbox']['running'] = "Running";
+$lang['mailbox']['enable_x'] = "Enable";
+$lang['mailbox']['disable_x'] = "Disable";
 
 $lang['edit']['spam_score'] = "Set a custom spam score";
 $lang['user']['spam_score_reset'] = "Reset to server default";
 $lang['edit']['spam_policy'] = "Add or remove items to white-/blacklist";
 $lang['edit']['spam_alias'] = "Create or change time limited alias addresses";
 
+$lang['danger']['comment_too_long'] = "Comment too long, max 160 chars allowed";
 $lang['danger']['img_tmp_missing'] = "Cannot validate image file: Temporary file not found";
 $lang['danger']['img_invalid'] = "Cannot validate image file";
 $lang['danger']['invalid_mime_type'] = "Invalid mime type";
@@ -667,13 +752,22 @@ $lang['quarantine']['subj'] = "Subject";
 $lang['quarantine']['text_plain_content'] = "Content (text/plain)";
 $lang['quarantine']['text_from_html_content'] = "Content (converted html)";
 $lang['quarantine']['atts'] = "Attachments";
+$lang['quarantine']['low_danger'] = "Low danger";
+$lang['quarantine']['neutral_danger'] = "Neutral/no rating";
+$lang['quarantine']['medium_danger'] = "Medium danger";
+$lang['quarantine']['high_danger'] = "High";
+$lang['quarantine']['danger'] = "Danger";
+$lang['quarantine']['confirm_delete'] = "Confirm the deletion of this element.";
+$lang['quarantine']['qhandler_success'] = "Request successfully sent to the system. You can now close the window.";
+
 $lang['warning']['fuzzy_learn_error'] = "Fuzzy hash learn error: %s";
 $lang['danger']['spam_learn_error'] = "Spam learn error: %s";
 $lang['success']['qlearn_spam'] = "Message ID %s was learned as spam and deleted";
 
-$lang['header']['quarantine'] = "Quarantine";
-$lang['header']['debug'] = "Debug";
-
+$lang['debug']['system_containers'] = 'System & Containers';
+$lang['debug']['solr_status'] = 'Solr status';
+$lang['debug']['solr_dead'] = 'Solr is starting, disabled or died.';
+$lang['debug']['logs'] = 'Logs';
 $lang['debug']['log_info'] = '<p>mailcow <b>in-memory logs</b> are collected in Redis lists and trimmed to LOG_LINES (%d) every minute to reduce hammering.
   <br>In-memory logs are not meant to be persistent. All applications that log in-memory, also log to the Docker daemon and therefore to the default logging driver.
   <br>The in-memory log type should be used for debugging minor issues with containers.</p>
@@ -683,6 +777,15 @@ $lang['debug']['log_info'] = '<p>mailcow <b>in-memory logs</b> are collected in 
 $lang['debug']['in_memory_logs'] = 'In-memory logs';
 $lang['debug']['external_logs'] = 'External logs';
 $lang['debug']['static_logs'] = 'Static logs';
+$lang['debug']['solr_uptime'] = 'Uptime';
+$lang['debug']['solr_started_at'] = 'Started at';
+$lang['debug']['solr_last_modified'] = 'Last modified';
+$lang['debug']['solr_size'] = 'Size';
+$lang['debug']['solr_docs'] = 'Docs';
+
+$lang['debug']['disk_usage'] = 'Disk usage';
+$lang['debug']['containers_info'] = "Container information";
+$lang['debug']['restart_container'] = 'Restart';
 
 $lang['quarantine']['release_body'] = "We have attached your message as eml file to this message.";
 $lang['danger']['release_send_failed'] = "Message could not be released: %s";
@@ -748,3 +851,4 @@ $lang['warning']['ip_invalid'] = 'Skipped invalid IP: %s';
 $lang['danger']['text_empty'] = 'Text must not be empty';
 $lang['danger']['subject_empty'] = 'Subject must not be empty';
 $lang['danger']['from_invalid'] = 'Sender must not be empty';
+$lang['danger']['network_host_invalid'] = 'Invalid network or host: %s';

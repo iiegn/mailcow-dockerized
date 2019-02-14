@@ -26,13 +26,32 @@ catch (PDOException $e) {
 }
 
 function parse_email($email) {
-  if(!filter_var($email, FILTER_VALIDATE_EMAIL)) return false;
+  if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return false;
   $a = strrpos($email, '@');
   return array('local' => substr($email, 0, $a), 'domain' => substr($email, $a));
 }
 
+function wl_by_sogo() {
+  global $pdo;
+  $rcpt = array();
+  $stmt = $pdo->query("SELECT DISTINCT(`sogo_folder_info`.`c_path2`) AS `user`, GROUP_CONCAT(`sogo_quick_contact`.`c_mail`) AS `contacts` FROM `sogo_folder_info`
+    INNER JOIN `sogo_quick_contact` ON `sogo_quick_contact`.`c_folder_id` = `sogo_folder_info`.`c_folder_id`
+      GROUP BY `c_path2`");
+  $sogo_contacts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  while ($row = array_shift($sogo_contacts)) {
+    foreach (explode(',', $row['contacts']) as $contact) {
+      if (!filter_var($contact, FILTER_VALIDATE_EMAIL)) {
+        continue;
+      }
+      $rcpt[$row['user']][] = '/^' . str_replace('/', '\/', $contact) . '$/i';
+    }
+  }
+  return $rcpt;
+}
+
 function ucl_rcpts($object, $type) {
   global $pdo;
+  $rcpt = array();
   if ($type == 'mailbox') {
     // Standard aliases
     $stmt = $pdo->prepare("SELECT `address` FROM `alias`
@@ -82,10 +101,7 @@ function ucl_rcpts($object, $type) {
       $rcpt[] = '/.*@' . $row['alias_domain'] . '/i';
     }
   }
-  if (!empty($rcpt)) {
-    return $rcpt;
-  }
-  return false;
+  return $rcpt;
 }
 ?>
 settings {
@@ -139,6 +155,40 @@ while ($row = array_shift($rows)) {
 }
 
 /*
+// Start SOGo contacts whitelist
+// Priority 4, lower than a domain whitelist (5) and lower than a mailbox whitelist (6)
+*/
+
+foreach (wl_by_sogo() as $user => $contacts) {
+  $username_sane = preg_replace("/[^a-zA-Z0-9]+/", "", $user);
+?>
+  whitelist_sogo_<?=$username_sane;?> {
+<?php
+  foreach ($contacts as $contact) {
+?>
+    from = <?=json_encode($contact, JSON_UNESCAPED_SLASHES);?>;
+<?php
+  }
+?>
+    priority = 4;
+<?php
+    foreach (ucl_rcpts($user, 'mailbox') as $rcpt) {
+?>
+    rcpt = <?=json_encode($rcpt, JSON_UNESCAPED_SLASHES);?>;
+<?php
+    }
+?>
+    apply "default" {
+      SOGO_CONTACT = -999.0;
+    }
+    symbols [
+      "SOGO_CONTACT"
+    ]
+  }
+<?php
+}
+
+/*
 // Start whitelist
 */
 
@@ -149,15 +199,16 @@ while ($row = array_shift($rows)) {
 ?>
   whitelist_<?=$username_sane;?> {
 <?php
-  $stmt = $pdo->prepare("SELECT GROUP_CONCAT(REPLACE(CONCAT('^', `value`, '$'), '*', '.*') SEPARATOR '|') AS `value` FROM `filterconf`
+  $stmt = $pdo->prepare("SELECT `value` FROM `filterconf`
     WHERE `object`= :object
       AND `option` = 'whitelist_from'");
   $stmt->execute(array(':object' => $row['object']));
-  $grouped_lists = $stmt->fetchAll(PDO::FETCH_COLUMN);
-  $value_sane = preg_replace("/\.\./", ".", (preg_replace("/\*/", ".*", $grouped_lists[0])));
+  $list_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  while ($item = array_shift($list_items)) {
 ?>
-    from = "/(<?=$value_sane;?>)/i";
+    from = "/<?='^' . str_replace('\*', '.*', preg_quote($item['value'], '/')) . '$' ;?>/i";
 <?php
+  }
   if (!filter_var(trim($row['object']), FILTER_VALIDATE_EMAIL)) {
 ?>
     priority = 5;
@@ -188,15 +239,20 @@ while ($row = array_shift($rows)) {
   }
   whitelist_header_<?=$username_sane;?> {
 <?php
-  $stmt = $pdo->prepare("SELECT GROUP_CONCAT(REPLACE(CONCAT('\<', `value`, '\>'), '*', '.*') SEPARATOR '|') AS `value` FROM `filterconf`
+  $header_from = array();
+  $stmt = $pdo->prepare("SELECT `value` FROM `filterconf`
     WHERE `object`= :object
       AND `option` = 'whitelist_from'");
   $stmt->execute(array(':object' => $row['object']));
-  $grouped_lists = $stmt->fetchAll(PDO::FETCH_COLUMN);
-  $value_sane = preg_replace("/\.\./", ".", (preg_replace("/\*/", ".*", $grouped_lists[0])));
+  $list_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
     header = {
-      "From" = "/(<?=$value_sane;?>)/i";
+<?php
+  while ($item = array_shift($list_items)) {
+    $header_from[] = str_replace('\*', '.*', preg_quote($item['value'], '/'));
+  }
+?>
+      "From" = "/(<?=implode('|', $header_from);?>)/i";
     }
 <?php
   if (!filter_var(trim($row['object']), FILTER_VALIDATE_EMAIL)) {
@@ -241,15 +297,17 @@ while ($row = array_shift($rows)) {
 ?>
   blacklist_<?=$username_sane;?> {
 <?php
-  $stmt = $pdo->prepare("SELECT GROUP_CONCAT(REPLACE(CONCAT('^', `value`, '$'), '*', '.*') SEPARATOR '|') AS `value` FROM `filterconf`
+  $items[] = array();
+  $stmt = $pdo->prepare("SELECT `value` FROM `filterconf`
     WHERE `object`= :object
       AND `option` = 'blacklist_from'");
   $stmt->execute(array(':object' => $row['object']));
-  $grouped_lists = $stmt->fetchAll(PDO::FETCH_COLUMN);
-  $value_sane = preg_replace("/\.\./", ".", (preg_replace("/\*/", ".*", $grouped_lists[0])));
+  $list_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  while ($item = array_shift($list_items)) {
 ?>
-    from = "/(<?=$value_sane;?>)/i";
+    from = "/<?='^' . str_replace('\*', '.*', preg_quote($item['value'], '/')) . '$' ;?>/i";
 <?php
+  }
   if (!filter_var(trim($row['object']), FILTER_VALIDATE_EMAIL)) {
 ?>
     priority = 5;
@@ -280,15 +338,20 @@ while ($row = array_shift($rows)) {
   }
   blacklist_header_<?=$username_sane;?> {
 <?php
-  $stmt = $pdo->prepare("SELECT GROUP_CONCAT(REPLACE(CONCAT('\<', `value`, '\>'), '*', '.*') SEPARATOR '|') AS `value` FROM `filterconf`
+  $header_from = array();
+  $stmt = $pdo->prepare("SELECT `value` FROM `filterconf`
     WHERE `object`= :object
       AND `option` = 'blacklist_from'");
   $stmt->execute(array(':object' => $row['object']));
-  $grouped_lists = $stmt->fetchAll(PDO::FETCH_COLUMN);
-  $value_sane = preg_replace("/\.\./", ".", (preg_replace("/\*/", ".*", $grouped_lists[0])));
+  $list_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
     header = {
-      "From" = "/(<?=$value_sane;?>)/i";
+<?php
+  while ($item = array_shift($list_items)) {
+    $header_from[] = str_replace('\*', '.*', preg_quote($item['value'], '/'));
+  }
+?>
+      "From" = "/(<?=implode('|', $header_from);?>)/i";
     }
 <?php
   if (!filter_var(trim($row['object']), FILTER_VALIDATE_EMAIL)) {
@@ -343,7 +406,6 @@ while ($row = array_shift($rows)) {
     priority = 9;
     want_spam = yes;
   }
-
 <?php
 // Start additional content
 
@@ -364,4 +426,3 @@ while ($row = array_shift($rows)) {
 }
 ?>
 }
-

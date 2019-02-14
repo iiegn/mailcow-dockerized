@@ -131,7 +131,7 @@ if (!isset($_SESSION['mailcow_cc_role'])) {
 					</div>
           <hr>
 					<div class="form-group">
-						<label class="control-label col-sm-2" for="quota">Ratelimit</label>
+						<label class="control-label col-sm-2" for="rl_frame"><?=$lang['acl']['ratelimit'];?></label>
             <div class="col-sm-7">
             <input name="rl_value" type="number" value="<?=(!empty($rl['value'])) ? $rl['value'] : null;?>" class="form-control" placeholder="disabled">
             </div>
@@ -326,6 +326,20 @@ if (!isset($_SESSION['mailcow_cc_role'])) {
 							</div>
 						</div>
 					</div>
+          <hr>
+					<div class="form-group">
+						<label class="control-label col-sm-2" for="rl_frame"><?=$lang['acl']['ratelimit'];?></label>
+            <div class="col-sm-7">
+            <input name="rl_value" type="number" value="<?=(!empty($rl['value'])) ? $rl['value'] : null;?>" class="form-control" placeholder="disabled">
+            </div>
+            <div class="col-sm-3">
+            <select name="rl_frame" class="form-control">
+              <option value="s" <?=(isset($rl['frame']) && $rl['frame'] == 's') ? 'selected' : null;?>>msgs / second</option>
+              <option value="m" <?=(isset($rl['frame']) && $rl['frame'] == 'm') ? 'selected' : null;?>>msgs / minute</option>
+              <option value="h" <?=(isset($rl['frame']) && $rl['frame'] == 'h') ? 'selected' : null;?>>msgs / hour</option>
+            </select>
+            </div>
+          </div>
 					<div class="form-group">
 						<div class="col-sm-offset-2 col-sm-10">
               <button class="btn btn-default" data-action="add_item" data-id="add_alias_domain" data-api-url='add/alias-domain' data-api-attr='{}' href="#"><?=$lang['admin']['add'];?></button>
@@ -558,7 +572,7 @@ if (!isset($_SESSION['mailcow_cc_role'])) {
 					<div class="form-group">
 						<label class="control-label col-sm-2" for="script_data">Script:</label>
 						<div class="col-sm-10">
-							<textarea autocorrect="off" spellcheck="false" autocapitalize="none" class="form-control" rows="20" id="script_data" name="script_data" required></textarea>
+							<textarea autocorrect="off" spellcheck="false" autocapitalize="none" class="form-control textarea-code" rows="20" id="script_data" name="script_data" required></textarea>
 						</div>
 					</div>
 					<div class="form-group">
@@ -572,7 +586,7 @@ if (!isset($_SESSION['mailcow_cc_role'])) {
 					<div class="form-group">
 						<div class="col-sm-offset-2 col-sm-10" id="add_filter_btns">
               <button class="btn btn-default" id="validate_sieve" href="#"><?=$lang['add']['validate'];?></button>
-              <button class="btn btn-success" data-action="add_item" data-id="add_filter" data-api-url='add/filter' data-api-attr='{}' href="#" disabled><?=$lang['admin']['add'];?></button>
+              <button class="btn btn-success" id="add_sieve_script" data-action="add_item" data-id="add_filter" data-api-url='add/filter' data-api-attr='{}' href="#" disabled><?=$lang['admin']['add'];?></button>
 						</div>
 					</div>
 				</form>

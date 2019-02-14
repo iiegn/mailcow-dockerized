@@ -21,7 +21,10 @@ RUN apt-get update && apt-get install -y \
 
 COPY settings.conf /etc/rspamd/settings.conf
 COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY metadata_exporter.lua /usr/share/rspamd/lua/metadata_exporter.lua
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
+
+STOPSIGNAL SIGTERM
 
 CMD ["/usr/bin/rspamd", "-f", "-u", "_rspamd", "-g", "_rspamd"]
