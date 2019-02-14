@@ -8,6 +8,12 @@ mailcow.conf_backup
 data/conf/nginx/*.active
 data/conf/postfix/extra.cf
 data/conf/postfix/sql
+data/conf/postfix/check_sasl_access
+data/conf/postfix/check_sasl_access.db
+data/conf/postfix/sasl_passwd
+data/conf/postfix/sasl_passwd.db
+data/conf/postfix/sender_dependent_relayhost_maps
+data/conf/postfix/sender_dependent_relayhost_maps.db
 data/conf/postfix/allow_mailcow_local.regexp
 data/conf/dovecot/sql
 data/conf/nextcloud-*.bak
