@@ -2,8 +2,8 @@
 # Path to mailcow-dockerized, e.g. /opt/mailcow-dockerized
 cd ~mailcow/mailcow-dockerized/
 
-docker-compose exec -T dovecot-mailcow doveadm expunge -A mailbox 'Junk' savedbefore 12w
-docker-compose exec -T dovecot-mailcow doveadm expunge -A mailbox 'Trash' savedbefore 52w
+/usr/local/bin/docker-compose exec -T dovecot-mailcow doveadm expunge -A mailbox 'Junk' savedbefore 12w
+/usr/local/bin/docker-compose exec -T dovecot-mailcow doveadm expunge -A mailbox 'Trash' savedbefore 52w
 
 ### crontab -e
 #
