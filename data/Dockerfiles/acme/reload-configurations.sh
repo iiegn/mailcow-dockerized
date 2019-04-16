@@ -5,6 +5,8 @@
 NGINX=($(curl --silent --insecure https://dockerapi/containers/json | jq -r '.[] | {name: .Config.Labels["com.docker.compose.service"], id: .Id}' | jq -rc 'select( .name | tostring | contains("nginx-mailcow")) | .id' | tr "\n" " "))
 DOVECOT=($(curl --silent --insecure https://dockerapi/containers/json | jq -r '.[] | {name: .Config.Labels["com.docker.compose.service"], id: .Id}' | jq -rc 'select( .name | tostring | contains("dovecot-mailcow")) | .id' | tr "\n" " "))
 POSTFIX=($(curl --silent --insecure https://dockerapi/containers/json | jq -r '.[] | {name: .Config.Labels["com.docker.compose.service"], id: .Id}' | jq -rc 'select( .name | tostring | contains("postfix-mailcow")) | .id' | tr "\n" " "))
+DAVMAIL=($(curl --silent --insecure https://dockerapi/containers/json | jq -r '.[] | {name: .Config.Labels["com.docker.compose.service"], id: .Id}' | jq -rc 'select( .name | tostring | contains("davmail-mailcow")) | .id' | tr "\n" " "))
+
 
 reload_nginx(){
   echo "Reloading Nginx..."
@@ -24,6 +26,14 @@ reload_postfix(){
   [[ ${POSTFIX_RELOAD_RET} != 'success' ]] && { echo "Could not reload Postfix, restarting container..."; restart_container ${POSTFIX} ; }
 }
 
+reload_davmail(){
+  echo "Reloading davmail..."
+  DAVMAIL_RELOAD_RET=$(curl -X POST --insecure https://dockerapi/containers/${POSTFIX}/exec -d '{"cmd":"reload", "task":"davmail"}' --silent -H 'Content-type: application/json' | jq -r .type)
+  [[ ${DAVMAIL_RELOAD_RET} != 'success' ]] && { echo "Could not reload davmail, restarting container..."; restart_container ${DAVMAIL} ; }
+}
+
+
+
 restart_container(){
   for container in $*; do
     echo "Restarting ${container}..."
@@ -36,10 +46,12 @@ if [[ "${CERT_AMOUNT_CHANGED}" == "1" ]]; then
   restart_container ${NGINX}
   restart_container ${DOVECOT}
   restart_container ${POSTFIX}
+  restart_container ${DAVMAIL}
 else
   reload_nginx
   #reload_dovecot
   restart_container ${DOVECOT}
   #reload_postfix
   restart_container ${POSTFIX}
+  restart_container ${DAVMAIL}
 fi
