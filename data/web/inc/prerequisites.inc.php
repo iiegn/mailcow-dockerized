@@ -1,10 +1,11 @@
 <?php
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/vars.inc.php';
 $default_autodiscover_config = $autodiscover_config;
-unset($https_port);
+
 if (file_exists($_SERVER['DOCUMENT_ROOT'] . '/inc/vars.local.inc.php')) {
   include_once $_SERVER['DOCUMENT_ROOT'] . '/inc/vars.local.inc.php';
 }
+unset($https_port);
 $autodiscover_config = array_merge($default_autodiscover_config, $autodiscover_config);
 
 header_remove("X-Powered-By");
@@ -35,7 +36,8 @@ foreach ($css_dir as $css_file) {
 
 // U2F API + T/HOTP API
 $u2f = new u2flib_server\U2F('https://' . $_SERVER['HTTP_HOST']);
-$tfa = new RobThree\Auth\TwoFactorAuth($OTP_LABEL);
+$qrprovider = new RobThree\Auth\Providers\Qr\QRServerProvider();
+$tfa = new RobThree\Auth\TwoFactorAuth($OTP_LABEL, 6, 30, 'sha1', $qrprovider);
 
 // Redis
 $redis = new Redis();
