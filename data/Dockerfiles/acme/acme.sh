@@ -63,6 +63,7 @@ reload_configurations(){
   local NGINX=($(curl --silent --insecure https://dockerapi/containers/json | jq -r '.[] | {name: .Config.Labels["com.docker.compose.service"], id: .Id}' | jq -rc 'select( .name | tostring | contains("nginx-mailcow")) | .id' | tr "\n" " "))
   local DOVECOT=($(curl --silent --insecure https://dockerapi/containers/json | jq -r '.[] | {name: .Config.Labels["com.docker.compose.service"], id: .Id}' | jq -rc 'select( .name | tostring | contains("dovecot-mailcow")) | .id' | tr "\n" " "))
   local POSTFIX=($(curl --silent --insecure https://dockerapi/containers/json | jq -r '.[] | {name: .Config.Labels["com.docker.compose.service"], id: .Id}' | jq -rc 'select( .name | tostring | contains("postfix-mailcow")) | .id' | tr "\n" " "))
+  local DAVMAIL=($(curl --silent --insecure https://dockerapi/containers/json | jq -r '.[] | {name: .Config.Labels["com.docker.compose.service"], id: .Id}' | jq -rc 'select( .name | tostring | contains("davmail-mailcow")) | .id' | tr "\n" " "))
   # Reloading
   echo "Reloading Nginx..."
   NGINX_RELOAD_RET=$(curl -X POST --insecure https://dockerapi/containers/${NGINX}/exec -d '{"cmd":"reload", "task":"nginx"}' --silent -H 'Content-type: application/json' | jq -r .type)
@@ -73,6 +74,9 @@ reload_configurations(){
   echo "Reloading Postfix..."
   POSTFIX_RELOAD_RET=$(curl -X POST --insecure https://dockerapi/containers/${POSTFIX}/exec -d '{"cmd":"reload", "task":"postfix"}' --silent -H 'Content-type: application/json' | jq -r .type)
   [[ ${POSTFIX_RELOAD_RET} != 'success' ]] && { echo "Could not reload Postfix, restarting container..."; restart_container ${POSTFIX} ; }
+  echo "Reloading davmail..."
+  DAVMAIL_RELOAD_RET=$(curl -X POST --insecure https://dockerapi/containers/${DAVMAIL}/exec -d '{"cmd":"reload", "task":"davmail"}' --silent -H 'Content-type: application/json' | jq -r .type)
+  [[ ${DAVMAIL_RELOAD_RET} != 'success' ]] && { echo "Could not reload davmail, restarting container..."; restart_container ${DAVMAIL} ; }
 }
 
 restart_container(){
