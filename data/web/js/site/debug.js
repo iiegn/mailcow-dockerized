@@ -18,7 +18,7 @@ jQuery(function($){
     eval(draw_table + '()');
   });
   function table_log_ready(ft, name) {
-    heading = ft.$el.parents('.tab-pane').find('.panel-heading')
+    heading = ft.$el.parents('.panel').find('.panel-heading')
     var ft_paging = ft.use(FooTable.Paging)
     $(heading).children('.table-lines').text(function(){
       return ft_paging.totalRows;
@@ -53,7 +53,7 @@ jQuery(function($){
       }),
       "empty": lang.empty,
       "paging": {"enabled": true,"limit": 5,"size": log_pagination_size},
-      "filtering": {"enabled": true,"delay": 1,"position": "left","placeholder": lang.filter_table},
+      "filtering": {"enabled": true,"delay": 1200,"position": "left","placeholder": lang.filter_table},
       "sorting": {"enabled": true},
       "on": {
         "ready.ft.table": function(e, ft){
@@ -85,7 +85,7 @@ jQuery(function($){
       }),
       "empty": lang.empty,
       "paging": {"enabled": true,"limit": 5,"size": log_pagination_size},
-      "filtering": {"enabled": true,"delay": 1,"position": "left","placeholder": lang.filter_table},
+      "filtering": {"enabled": true,"delay": 1200,"position": "left","placeholder": lang.filter_table},
       "sorting": {"enabled": true},
       "on": {
         "ready.ft.table": function(e, ft){
@@ -118,7 +118,7 @@ jQuery(function($){
       }),
       "empty": lang.empty,
       "paging": {"enabled": true,"limit": 5,"size": log_pagination_size},
-      "filtering": {"enabled": true,"delay": 1,"position": "left","connectors": false,"placeholder": lang.filter_table},
+      "filtering": {"enabled": true,"delay": 1200,"position": "left","connectors": false,"placeholder": lang.filter_table},
       "sorting": {"enabled": true},
       "on": {
         "ready.ft.table": function(e, ft){
@@ -152,7 +152,7 @@ jQuery(function($){
       }),
       "empty": lang.empty,
       "paging": {"enabled": true,"limit": 5,"size": log_pagination_size},
-      "filtering": {"enabled": true,"delay": 1,"position": "left","connectors": false,"placeholder": lang.filter_table},
+      "filtering": {"enabled": true,"delay": 1200,"position": "left","connectors": false,"placeholder": lang.filter_table},
       "sorting": {"enabled": true},
       "on": {
         "ready.ft.table": function(e, ft){
@@ -194,7 +194,7 @@ jQuery(function($){
       }),
       "empty": lang.empty,
       "paging": {"enabled": true,"limit": 5,"size": log_pagination_size},
-      "filtering": {"enabled": true,"delay": 1,"position": "left","connectors": false,"placeholder": lang.filter_table},
+      "filtering": {"enabled": true,"delay": 1200,"position": "left","connectors": false,"placeholder": lang.filter_table},
       "sorting": {"enabled": true},
       "on": {
         "ready.ft.table": function(e, ft){
@@ -231,7 +231,7 @@ jQuery(function($){
       }),
       "empty": lang.empty,
       "paging": {"enabled": true,"limit": 5,"size": log_pagination_size},
-      "filtering": {"enabled": true,"delay": 1,"position": "left","connectors": false,"placeholder": lang.filter_table},
+      "filtering": {"enabled": true,"delay": 1200,"position": "left","connectors": false,"placeholder": lang.filter_table},
       "sorting": {"enabled": true},
       "on": {
         "ready.ft.table": function(e, ft){
@@ -262,7 +262,7 @@ jQuery(function($){
       }),
       "empty": lang.empty,
       "paging": {"enabled": true,"limit": 5,"size": log_pagination_size},
-      "filtering": {"enabled": true,"delay": 1,"position": "left","connectors": false,"placeholder": lang.filter_table},
+      "filtering": {"enabled": true,"delay": 1200,"position": "left","connectors": false,"placeholder": lang.filter_table},
       "sorting": {"enabled": true},
       "on": {
         "ready.ft.table": function(e, ft){
@@ -294,7 +294,7 @@ jQuery(function($){
       }),
       "empty": lang.empty,
       "paging": {"enabled": true,"limit": 5,"size": log_pagination_size},
-      "filtering": {"enabled": true,"delay": 1,"position": "left","connectors": false,"placeholder": lang.filter_table},
+      "filtering": {"enabled": true,"delay": 1200,"position": "left","connectors": false,"placeholder": lang.filter_table},
       "sorting": {"enabled": true},
       "on": {
         "ready.ft.table": function(e, ft){
@@ -326,7 +326,7 @@ jQuery(function($){
       }),
       "empty": lang.empty,
       "paging": {"enabled": true,"limit": 5,"size": log_pagination_size},
-      "filtering": {"enabled": true,"delay": 1,"position": "left","connectors": false,"placeholder": lang.filter_table},
+      "filtering": {"enabled": true,"delay": 1200,"position": "left","connectors": false,"placeholder": lang.filter_table},
       "sorting": {"enabled": true},
       "on": {
         "ready.ft.table": function(e, ft){
@@ -358,7 +358,7 @@ jQuery(function($){
       }),
       "empty": lang.empty,
       "paging": {"enabled": true,"limit": 5,"size": log_pagination_size},
-      "filtering": {"enabled": true,"delay": 1,"position": "left","connectors": false,"placeholder": lang.filter_table},
+      "filtering": {"enabled": true,"delay": 1200,"position": "left","connectors": false,"placeholder": lang.filter_table},
       "sorting": {"enabled": true},
       "on": {
         "ready.ft.table": function(e, ft){
@@ -441,12 +441,12 @@ jQuery(function($){
       }),
       "empty": lang.empty,
       "paging": {"enabled": true,"limit": 5,"size": log_pagination_size},
-      "filtering": {"enabled": true,"delay": 1,"position": "left","connectors": false,"placeholder": lang.filter_table},
+      "filtering": {"enabled": true,"delay": 1200,"position": "left","connectors": false,"placeholder": lang.filter_table},
       "sorting": {"enabled": true},
       "on": {
         "ready.ft.table": function(e, ft){
           table_log_ready(ft, 'rspamd_history');
-          heading = ft.$el.parents('.tab-pane').find('.panel-heading')
+          heading = ft.$el.parents('.panel').find('.panel-heading')
           $(heading).children('.table-lines').text(function(){
             var ft_paging = ft.use(FooTable.Paging)
             return ft_paging.totalRows;
@@ -468,29 +468,38 @@ jQuery(function($){
       else {
         item.rcpt = item.rcpt_smtp.join(", ");
       }
-      Object.keys(item.symbols).map(function(key) {
+      item.symbols = Object.keys(item.symbols).sort(function (a, b) {
+        if (item.symbols[a].score === 0) return 1
+        if (item.symbols[b].score === 0) return -1
+        if (item.symbols[b].score < 0 && item.symbols[a].score < 0) {
+          return item.symbols[a].score - item.symbols[b].score
+        }
+        if (item.symbols[b].score > 0 && item.symbols[a].score > 0) {
+          return item.symbols[b].score - item.symbols[a].score
+        }
+        return item.symbols[b].score - item.symbols[a].score
+      }).map(function(key) {
         var sym = item.symbols[key];
-        if (sym.score <= 0) {
+        if (sym.score < 0) {
           sym.score_formatted = '(<span class="text-success"><b>' + sym.score + '</b></span>)'
+        }
+        else if (sym.score === 0) {
+          sym.score_formatted = '(<span><b>' + sym.score + '</b></span>)'
         }
         else {
           sym.score_formatted = '(<span class="text-danger"><b>' + sym.score + '</b></span>)'
         }
         var str = '<strong>' + key + '</strong> ' + sym.score_formatted;
         if (sym.options) {
-          str += ' [' + sym.options.join(",") + "]";
+          str += ' [' + sym.options.join(", ") + "]";
         }
-        item.symbols[key].str = str;
-      });
-      item.symbols = Object.keys(item.symbols).
-      map(function(key) {
-        return item.symbols[key];
-      }).sort(function(e1, e2) {
-        return Math.abs(e1.score) < Math.abs(e2.score);
-      }).map(function(e) {
-        return e.str;
-      }).join("<br>\n");
-      var scan_time = item.time_real.toFixed(3) + ' / ' + item.time_virtual.toFixed(3);
+        return str
+      }).join('<br>\n');
+      item.subject = escapeHtml(item.subject);
+      var scan_time = item.time_real.toFixed(3);
+      if (item.time_virtual) {
+        scan_time += ' / ' + item.time_virtual.toFixed(3);
+      }
       item.scan_time = {
         "options": {
           "sortValue": item.time_real
@@ -524,6 +533,11 @@ jQuery(function($){
     });
     } else if (table == 'autodiscover_log') {
       $.each(data, function (i, item) {
+        if (item.ua == null) {
+          item.ua = 'unknown';
+        } else {
+          item.ua = escapeHtml(item.ua);
+        }
         item.ua = '<span style="font-size:small">' + item.ua + '</span>';
         if (item.service == "activesync") {
           item.service = '<span class="label label-info">ActiveSync</span>';
@@ -532,7 +546,7 @@ jQuery(function($){
           item.service = '<span class="label label-success">IMAP, SMTP, Cal-/CardDAV</span>';
         }
         else {
-          item.service = '<span class="label label-danger">' + item.service + '</span>';
+          item.service = '<span class="label label-danger">' + escapeHtml(item.service) + '</span>';
         }
       });
     } else if (table == 'watchdog') {
@@ -558,6 +572,7 @@ jQuery(function($){
       $.each(data, function (i, item) {
         if (item === null) { return true; }
         item.user = escapeHtml(item.user);
+        item.call = escapeHtml(item.call);
         item.task = '<code>' + item.task + '</code>';
         item.type = '<span class="label label-' + item.type + '">' + item.type + '</span>';
       });
@@ -569,6 +584,7 @@ jQuery(function($){
         } else {
           item.message = escapeHtml(item.message);
         }
+        item.call = escapeHtml(item.call);
         var danger_class = ["emerg", "alert", "crit", "err"];
         var warning_class = ["warning", "warn"];
         var info_class = ["notice", "info", "debug"];
@@ -588,6 +604,7 @@ jQuery(function($){
         } else if (item.method == 'POST') {
           item.method = '<span class="label label-warning">' + item.method + '</span>';
         }
+        item.data = escapeHtml(item.data);
       });
     } else if (table == 'rllog') {
       $.each(data, function (i, item) {
@@ -616,7 +633,7 @@ jQuery(function($){
       return;
     }
     if (ft = FooTable.get($('#' + log_table))) {
-      var heading = ft.$el.parents('.tab-pane').find('.panel-heading')
+      var heading = ft.$el.parents('.panel').find('.panel-heading')
       var ft_paging = ft.use(FooTable.Paging)
       var load_rows = (ft_paging.totalRows + 1) + '-' + (ft_paging.totalRows + new_nrows)
       $.get('/api/v1/get/logs/' + log_url + '/' + load_rows).then(function(data){

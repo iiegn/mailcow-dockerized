@@ -41,7 +41,15 @@ $tfa = new RobThree\Auth\TwoFactorAuth($OTP_LABEL, 6, 30, 'sha1', $qrprovider);
 
 // Redis
 $redis = new Redis();
-$redis->connect('redis-mailcow', 6379);
+try {
+  $redis->connect('redis-mailcow', 6379);
+}
+catch (Exception $e) {
+?>
+<center style='font-family:sans-serif;'>Connection to Redis failed.<br /><br />The following error was reported:<br/><?=$e->getMessage();?></center>
+<?php
+exit;
+}
 
 // PDO
 // Calculate offset
@@ -77,6 +85,35 @@ if (fsockopen("tcp://dockerapi", 443, $errno, $errstr) === false) {
 <?php
 exit;
 }
+
+// OAuth2
+class mailcowPdo extends OAuth2\Storage\Pdo {
+  public function __construct($connection, $config = array()) {
+    parent::__construct($connection, $config);
+    $this->config['user_table'] = 'mailbox';
+  }
+  public function checkUserCredentials($username, $password) {
+    if (check_login($username, $password) == 'user') {
+      return true;
+    }
+    return false;
+  }
+  public function getUserDetails($username) {
+    return $this->getUser($username);
+  }
+}
+$oauth2_scope_storage = new OAuth2\Storage\Memory(array('default_scope' => 'profile', 'supported_scopes' => array('profile')));
+$oauth2_storage = new mailcowPdo(array('dsn' => $dsn, 'username' => $database_user, 'password' => $database_pass));
+$oauth2_server = new OAuth2\Server($oauth2_storage, array(
+    'refresh_token_lifetime'         => $REFRESH_TOKEN_LIFETIME,
+    'access_lifetime'                => $ACCESS_TOKEN_LIFETIME,
+));
+$oauth2_server->setScopeUtil(new OAuth2\Scope($oauth2_scope_storage));
+$oauth2_server->addGrantType(new OAuth2\GrantType\AuthorizationCode($oauth2_storage));
+$oauth2_server->addGrantType(new OAuth2\GrantType\UserCredentials($oauth2_storage));
+$oauth2_server->addGrantType(new OAuth2\GrantType\RefreshToken($oauth2_storage, array(
+    'always_issue_new_refresh_token' => true
+)));
 
 function exception_handler($e) {
     if ($e instanceof PDOException) {
@@ -165,6 +202,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.policy.inc.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.dkim.inc.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.fwdhost.inc.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.mailq.inc.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.oauth2.inc.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.ratelimit.inc.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.transports.inc.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.rsettings.inc.php';
@@ -183,4 +221,3 @@ if (isset($_SESSION['mailcow_cc_role'])) {
   acl('to_session');
 }
 $UI_TEXTS = customize('get', 'ui_texts');
-
