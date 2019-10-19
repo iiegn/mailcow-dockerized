@@ -83,6 +83,7 @@ smtp_via_transport_maps      unix  -       -       n       -       -       smtp
 relay-smtps  unix  -       -       n       -       -       smtp
   -o smtp_tls_security_level=encrypt
   -o smtp_tls_wrappermode=yes
+  -o smtp_tls_mandatory_protocols=!SSLv2,!SSLv3
 
 tlsproxy   unix  -       -       n       -       0       tlsproxy
 dnsblog    unix  -       -       n       -       0       dnsblog
