@@ -14,9 +14,10 @@ if (!isset($_SESSION['gal']) && $license_cache = $redis->Get('LICENSE_STATUS_CAC
   <ul class="nav nav-tabs" role="tablist">
     <li role="presentation" class="active"><a href="#tab-access" aria-controls="tab-access" role="tab" data-toggle="tab"><?=$lang['admin']['access'];?></a></li>
     <li role="presentation"><a href="#tab-config" aria-controls="tab-config" role="tab" data-toggle="tab"><?=$lang['admin']['configuration'];?></a></li>
-    <li role="presentation"><a href="#tab-routing" aria-controls="tab-config" role="tab" data-toggle="tab"><?=$lang['admin']['routing'];?></a></li>
+    <li role="presentation"><a href="#tab-routing" aria-controls="tab-routing" role="tab" data-toggle="tab"><?=$lang['admin']['routing'];?></a></li>
     <li role="presentation"><a href="#tab-sys-mails" aria-controls="tab-sys-mails" role="tab" data-toggle="tab"><?=$lang['admin']['sys_mails'];?></a></li>
     <li role="presentation"><a href="#tab-mailq" aria-controls="tab-mailq" role="tab" data-toggle="tab"><?=$lang['admin']['queue_manager'];?></a></li>
+    <li role="presentation"><a href="#tab-rspamdmaps" aria-controls="tab-rspamdmaps" role="tab" data-toggle="tab"><?=$lang['admin']['rspamd_global_filters'];?></a></li>
   </ul>
 
   <div class="row">
@@ -80,8 +81,8 @@ if (!isset($_SESSION['gal']) && $license_cache = $redis->Get('LICENSE_STATUS_CAC
           </div>
         </div>
 
-        <legend data-target="#license" class="arrow-toggle" unselectable="on" data-toggle="collapse">
-          <span style="font-size:12px" class="arrow rotate glyphicon glyphicon-menu-down"></span> <?=$lang['admin']['guid_and_license'];?>
+        <legend style="cursor:pointer;" data-target="#license" class="arrow-toggle" unselectable="on" data-toggle="collapse">
+          <span style="font-size:12px" class="arrow rotate glyphicon glyphicon-menu-up"></span> <?=$lang['admin']['guid_and_license'];?>
         </legend>
         <div id="license" class="collapse in">
         <form class="form-horizontal" autocapitalize="none" autocorrect="off" role="form" method="post">
@@ -96,7 +97,8 @@ if (!isset($_SESSION['gal']) && $license_cache = $redis->Get('LICENSE_STATUS_CAC
               </div>
               <p class="help-block">
                 <?=$lang['admin']['customer_id'];?>: <?=(isset($_SESSION['gal']['c'])) ? $_SESSION['gal']['c'] : '?';?> -
-                <?=$lang['admin']['service_id'];?>: <?=(isset($_SESSION['gal']['s'])) ? $_SESSION['gal']['s'] : '?';?>
+                <?=$lang['admin']['service_id'];?>: <?=(isset($_SESSION['gal']['s'])) ? $_SESSION['gal']['s'] : '?';?> -
+                <?=$lang['admin']['sal_level'];?>: <?=(isset($_SESSION['gal']['m'])) ? $_SESSION['gal']['m'] : '?';?>
               </p>
             </div>
           </div>
@@ -111,43 +113,112 @@ if (!isset($_SESSION['gal']) && $license_cache = $redis->Get('LICENSE_STATUS_CAC
         </form>
         </div>
 
-        <legend data-target="#api" class="arrow-toggle" unselectable="on" data-toggle="collapse">
-          <span style="font-size:12px" class="arrow rotate glyphicon glyphicon-menu-down"></span> API
+        <legend style="margin-top:20px">
+          <span style="font-size:12px" class="arrow rotate glyphicon glyphicon-wrench"></span> API
         </legend>
         <?php
-        $api = admin_api('get');
+        $api_ro = admin_api('ro', 'get');
+        $api_rw = admin_api('rw', 'get');
         ?>
-        <div id="api" class="collapse">
-        <form class="form-horizontal" autocapitalize="none" autocorrect="off" role="form" method="post">
-          <div class="form-group">
-            <label class="control-label col-sm-3" for="allow_from"><?=$lang['admin']['api_allow_from'];?>:</label>
-            <div class="col-sm-9">
-              <textarea class="form-control" rows="5" name="allow_from" id="allow_from" required><?=htmlspecialchars($api['allow_from']);?></textarea>
+        <div class="panel-group" id="accordion">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              <h4 class="panel-title">
+                <a data-toggle="collapse" data-parent="#accordion" href="#api-ro">
+                ⇇ Read-Only Access</a>
+              </h4>
             </div>
-          </div>
-          <div class="form-group">
-            <label class="control-label col-sm-3" for="admin_api_key"><?=$lang['admin']['api_key'];?>:</label>
-            <div class="col-sm-9">
-              <input type="text" class="form-control" placeholder="-" value="<?=htmlspecialchars($api['api_key']);?>" readonly>
-            </div>
-          </div>
-          <div class="form-group">
-            <div class="col-sm-offset-3 col-sm-9">
-              <label>
-                <input type="checkbox" name="active" <?=($api['active'] == 1) ? 'checked' : null;?>> <?=$lang['admin']['activate_api'];?>
-              </label>
-            </div>
-          </div>
-          <div class="form-group">
-            <div class="col-sm-offset-3 col-sm-9">
-              <p class="help-block"><?=$lang['admin']['api_info'];?></p>
-              <div class="btn-group">
-                <button class="btn btn-default" name="admin_api" type="submit" href="#"><span class="glyphicon glyphicon-check"></span> <?=$lang['admin']['save'];?></button>
-                <button class="btn btn-info" name="admin_api_regen_key" type="submit" href="#"><?=$lang['admin']['regen_api_key'];?></button>
+            <div id="api-ro" class="panel-collapse collapse">
+              <div class="panel-body">
+                <form class="form-horizontal" autocapitalize="none" autocorrect="off" role="form" method="post">
+                  <div class="form-group">
+                    <label class="control-label col-sm-3" for="allow_from_ro"><?=$lang['admin']['api_allow_from'];?>:</label>
+                    <div class="col-sm-9">
+                      <textarea class="form-control" rows="2" name="allow_from" id="allow_from_ro" <?=($api_ro['skip_ip_check'] == 1) ? 'disabled' : null;?> required><?=htmlspecialchars($api_ro['allow_from']);?></textarea>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <div class="col-sm-offset-3 col-sm-9">
+                      <label>
+                        <input type="checkbox" name="skip_ip_check" id="skip_ip_check_ro" <?=($api_ro['skip_ip_check'] == 1) ? 'checked' : null;?>> <?=$lang['admin']['api_skip_ip_check'];?>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="control-label col-sm-3"><?=$lang['admin']['api_key'];?>:</label>
+                    <div class="col-sm-9">
+                      <pre><?=(empty(htmlspecialchars($api_ro['api_key']))) ? '-' : htmlspecialchars($api_ro['api_key']);?></pre>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <div class="col-sm-offset-3 col-sm-9">
+                      <label>
+                        <input type="checkbox" name="active" <?=($api_ro['active'] == 1) ? 'checked' : null;?>> <?=$lang['admin']['activate_api'];?>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <div class="col-sm-offset-3 col-sm-9">
+                      <p class="help-block"><?=$lang['admin']['api_info'];?></p>
+                      <div class="btn-group">
+                        <button class="btn btn-sm btn-default" name="admin_api[ro]" type="submit" href="#"><span class="glyphicon glyphicon-check"></span> <?=$lang['admin']['save'];?></button>
+                        <button class="btn btn-sm btn-primary" name="admin_api_regen_key[ro]" type="submit" href="#"><?=$lang['admin']['regen_api_key'];?></button>
+                      </div>
+                    </div>
+                  </div>
+                </form>
               </div>
             </div>
           </div>
-        </form>
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              <h4 class="panel-title">
+                <a data-toggle="collapse" data-parent="#accordion" href="#api-rw">
+                ⇄ Read-Write Access</a>
+              </h4>
+            </div>
+            <div id="api-rw" class="panel-collapse collapse">
+              <div class="panel-body">
+                <form class="form-horizontal" autocapitalize="none" autocorrect="off" role="form" method="post">
+                  <div class="form-group">
+                    <label class="control-label col-sm-3" for="allow_from_rw"><?=$lang['admin']['api_allow_from'];?>:</label>
+                    <div class="col-sm-9">
+                      <textarea class="form-control" rows="2" name="allow_from" id="allow_from_rw" <?=($api_rw['skip_ip_check'] == 1) ? 'disabled' : null;?> required><?=htmlspecialchars($api_rw['allow_from']);?></textarea>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <div class="col-sm-offset-3 col-sm-9">
+                      <label>
+                        <input type="checkbox" name="skip_ip_check" id="skip_ip_check_rw" <?=($api_rw['skip_ip_check'] == 1) ? 'checked' : null;?>> <?=$lang['admin']['api_skip_ip_check'];?>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="control-label col-sm-3" for="admin_api_key"><?=$lang['admin']['api_key'];?>:</label>
+                    <div class="col-sm-9">
+                      <pre><?=(empty(htmlspecialchars($api_rw['api_key']))) ? '-' : htmlspecialchars($api_rw['api_key']);?></pre>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <div class="col-sm-offset-3 col-sm-9">
+                      <label>
+                        <input type="checkbox" name="active" <?=($api_rw['active'] == 1) ? 'checked' : null;?>> <?=$lang['admin']['activate_api'];?>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <div class="col-sm-offset-3 col-sm-9">
+                      <p class="help-block"><?=$lang['admin']['api_info'];?></p>
+                      <div class="btn-group">
+                        <button class="btn btn-sm btn-default" name="admin_api[rw]" type="submit" href="#"><span class="glyphicon glyphicon-check"></span> <?=$lang['admin']['save'];?></button>
+                        <button class="btn btn-sm btn-primary" name="admin_api_regen_key[rw]" type="submit" href="#"><?=$lang['admin']['regen_api_key'];?></button>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -200,7 +271,7 @@ if (!isset($_SESSION['gal']) && $license_cache = $redis->Get('LICENSE_STATUS_CAC
           </div>
         </div>
     </div>
-  
+
     <div class="panel panel-default">
       <div class="panel-heading">
         <h3 class="panel-title">Rspamd UI</h3>
@@ -270,7 +341,7 @@ if (!isset($_SESSION['gal']) && $license_cache = $redis->Get('LICENSE_STATUS_CAC
             <form class="form" data-id="rlyhost" role="form" method="post">
               <div class="form-group">
                 <label for="hostname"><?=$lang['admin']['host'];?></label>
-                <input class="form-control input-sm" name="hostname" placeholder='host:25, host, [host]:25, [0.0.0.0]:25' required>
+                <input class="form-control input-sm" name="hostname" placeholder='[0.0.0.0], [0.0.0.0]:25, host:25, host, [host]:25' required>
               </div>
               <div class="form-group">
                 <label for="username"><?=$lang['admin']['username'];?></label>
@@ -348,8 +419,8 @@ if (!isset($_SESSION['gal']) && $license_cache = $redis->Get('LICENSE_STATUS_CAC
 
   <div role="tabpanel" class="tab-pane" id="tab-config">
     <div class="row">
-    <div id="sidebar-admin" class="col-sm-2 hidden-xs">
-      <div id="scrollbox" class="list-group">
+    <div id="sidebar-admin-config" class="col-sm-3 hidden-xs">
+      <div id="scrollbox-config" class="list-group">
         <a href="#dkim" class="list-group-item"><?=$lang['admin']['dkim_keys'];?></a>
         <a href="#fwdhosts" class="list-group-item"><?=$lang['admin']['forwarding_hosts'];?></a>
         <a href="#f2bparams" class="list-group-item"><?=$lang['admin']['f2b_parameters'];?></a>
@@ -360,7 +431,7 @@ if (!isset($_SESSION['gal']) && $license_cache = $redis->Get('LICENSE_STATUS_CAC
         <a href="#top" class="list-group-item" style="border-top:1px dashed #dadada">↸ <?=$lang['admin']['to_top'];?></a>
       </div>
     </div>
-    <div class="col-sm-10">
+    <div class="col-sm-9">
     <span class="anchor" id="dkim"></span>
     <div class="panel panel-default">
       <div class="panel-heading"><?=$lang['admin']['dkim_keys'];?></div>
@@ -654,13 +725,13 @@ if (!isset($_SESSION['gal']) && $license_cache = $redis->Get('LICENSE_STATUS_CAC
         if (!empty($f2b_data['active_bans'])):
           foreach ($f2b_data['active_bans'] as $active_bans):
           ?>
-          <p><span class="label label-info" style="padding:4px;font-size:85%;"><span class="glyphicon glyphicon-filter"></span> <?=$active_bans['network'];?> (<?=$active_bans['banned_until'];?>) - 
+          <p><span class="label label-info" style="padding:4px;font-size:85%;"><span class="glyphicon glyphicon-filter"></span> <?=$active_bans['network'];?> (<?=$active_bans['banned_until'];?>) -
             <?php
             if ($active_bans['queued_for_unban'] == 0):
             ?>
             <a data-action="edit_selected" data-item="<?=$active_bans['network'];?>" data-id="f2b-quick" data-api-url='edit/fail2ban' data-api-attr='{"action":"unban"}' href="#">[<?=$lang['admin']['queue_unban'];?>]</a>
             <a data-action="edit_selected" data-item="<?=$active_bans['network'];?>" data-id="f2b-quick" data-api-url='edit/fail2ban' data-api-attr='{"action":"whitelist"}' href="#">[whitelist]</a>
-            <a data-action="edit_selected" data-item="<?=$active_bans['network'];?>" data-id="f2b-quick" data-api-url='edit/fail2ban' data-api-attr='{"action":"blacklist"}' href="#">[blacklist]</a>
+            <a data-action="edit_selected" data-item="<?=$active_bans['network'];?>" data-id="f2b-quick" data-api-url='edit/fail2ban' data-api-attr='{"action":"blacklist"}' href="#">[blacklist (<b>needs restart</b>)]</a>
             <?php
             else:
             ?>
@@ -690,25 +761,39 @@ if (!isset($_SESSION['gal']) && $license_cache = $redis->Get('LICENSE_STATUS_CAC
     <div class="panel panel-default">
       <div class="panel-heading"><?=$lang['admin']['quarantine'];?></div>
       <div class="panel-body">
-       <?php $q_data = quarantine('settings');?>
+        <?php $q_data = quarantine('settings');
+        if (empty($q_data['retention_size']) || empty($q_data['max_size'])):
+        ?>
+        <div class="panel-body"><div class="alert alert-info"><?=$lang['quarantine']['disabled_by_config'];?></div></div>
+        <?php
+        endif;
+        ?>
         <form class="form" data-id="quarantine" role="form" method="post">
           <div class="row">
-            <div class="col-sm-4">
+            <div class="col-sm-6">
               <div class="form-group">
                 <label for="retention_size"><?=$lang['admin']['quarantine_retention_size'];?></label>
                 <input type="number" class="form-control" name="retention_size" value="<?=$q_data['retention_size'];?>" placeholder="0" required>
               </div>
             </div>
-            <div class="col-sm-4">
+            <div class="col-sm-6">
               <div class="form-group">
                 <label for="max_size"><?=$lang['admin']['quarantine_max_size'];?></label>
                 <input type="number" class="form-control" name="max_size" value="<?=$q_data['max_size'];?>" placeholder="0" required>
               </div>
             </div>
-            <div class="col-sm-4">
+          </div>
+          <div class="row">
+            <div class="col-sm-6">
               <div class="form-group">
                 <label for="max_age"><?=$lang['admin']['quarantine_max_age'];?></label>
                 <input type="number" class="form-control" name="max_age" value="<?=$q_data['max_age'];?>" min="1" required>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="form-group">
+                <label for="sender"><span class="glyphicon glyphicon-copy"></span> <?=$lang['admin']['quarantine_bcc'];?></label>
+                <input type="email" class="form-control" name="bcc" value="<?=htmlspecialchars($q_data['bcc']);?>" placeholder="">
               </div>
             </div>
           </div>
@@ -716,7 +801,7 @@ if (!isset($_SESSION['gal']) && $license_cache = $redis->Get('LICENSE_STATUS_CAC
             <div class="col-sm-6">
               <div class="form-group">
                 <label for="sender"><?=$lang['admin']['quarantine_notification_sender'];?>:</label>
-                <input type="text" class="form-control" name="sender" value="<?=htmlspecialchars($q_data['sender']);?>" placeholder="quarantine@localhost">
+                <input type="email" class="form-control" name="sender" value="<?=htmlspecialchars($q_data['sender']);?>" placeholder="quarantine@localhost">
               </div>
             </div>
             <div class="col-sm-6">
@@ -726,6 +811,7 @@ if (!isset($_SESSION['gal']) && $license_cache = $redis->Get('LICENSE_STATUS_CAC
               </div>
             </div>
           </div>
+          <hr>
           <div class="row">
             <div class="col-sm-12">
               <legend data-target="#quarantine_template" style="cursor:pointer" class="arrow-toggle" unselectable="on" data-toggle="collapse">
@@ -777,7 +863,7 @@ if (!isset($_SESSION['gal']) && $license_cache = $redis->Get('LICENSE_STATUS_CAC
           <div class="col-sm-6">
             <div class="form-group">
               <label for="sender"><?=$lang['admin']['quarantine_notification_sender'];?>:</label>
-              <input type="text" class="form-control" name="sender" value="<?=htmlspecialchars($qw_data['sender']);?>" placeholder="quota-warning@localhost">
+              <input type="email" class="form-control" name="sender" value="<?=htmlspecialchars($qw_data['sender']);?>" placeholder="quota-warning@localhost">
             </div>
           </div>
           <div class="col-sm-6">
@@ -1136,6 +1222,73 @@ if (!isset($_SESSION['gal']) && $license_cache = $redis->Get('LICENSE_STATUS_CAC
     </div>
   </div>
 
+  <div role="tabpanel" class="tab-pane" id="tab-rspamdmaps">
+    <div class="row">
+    <div id="sidebar-admin-maps" class="col-sm-2 hidden-xs">
+      <div id="scrollbox-maps" class="list-group">
+        <a href="#regexmaps" class="list-group-item">Regex maps</a>
+        <!-- <a href="#standardmaps" class="list-group-item">Standard maps</a> -->
+        <a href="#top" class="list-group-item" style="border-top:1px dashed #dadada">↸ <?=$lang['admin']['to_top'];?></a>
+      </div>
+    </div>
+    <div class="col-sm-10">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <?=$lang['admin']['rspamd_global_filters'];?>
+        </div>
+        <div class="panel-body">
+          <p><?=$lang['admin']['rspamd_global_filters_info'];?></p>
+          <div id="confirm_show_rspamd_global_filters" class="<?=($_SESSION['show_rspamd_global_filters'] === true) ? 'hidden' : '';?>">
+            <div class="form-group">
+              <div class="col-sm-offset-2 col-sm-10">
+                <label>
+                  <input type="checkbox" id="show_rspamd_global_filters"> <?=$lang['admin']['rspamd_global_filters_agree'];?>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div id="rspamd_global_filters" class="<?=($_SESSION['show_rspamd_global_filters'] !== true) ? 'hidden' : '';?>">
+          <hr>
+          <span class="anchor" id="regexmaps"></span>
+          <h4>Regex Maps</h4>
+          <p><?=$lang['admin']['rspamd_global_filters_regex'];?></p>
+          <ul>
+          <?php
+          foreach ($RSPAMD_MAPS['regex'] as $rspamd_regex_desc => $rspamd_regex_map):
+          ?>
+          <li><a href="#<?=$rspamd_regex_map;?>"><?=$rspamd_regex_desc;?></a> (<small><?=$rspamd_regex_map;?></small>)</li>
+          <?php
+          endforeach;
+          ?>
+          </ul>
+          <?php
+          foreach ($RSPAMD_MAPS['regex'] as $rspamd_regex_desc => $rspamd_regex_map):
+          ?>
+          <hr>
+          <span class="anchor" id="<?=$rspamd_regex_map;?>"></span>
+          <form class="form-horizontal" data-id="<?=$rspamd_regex_map;?>" role="form" method="post">
+            <div class="form-group">
+              <label class="control-label col-sm-3" for="<?=$rspamd_regex_map;?>"><?=$rspamd_regex_desc;?><br><small><?=$rspamd_regex_map;?></small></label>
+              <div class="col-sm-9">
+                <textarea id="<?=$rspamd_regex_map;?>" spellcheck="false" autocorrect="off" autocapitalize="none" class="form-control textarea-code" rows="10" name="rspamd_map_data" required><?=file_get_contents('/rspamd_custom_maps/' . $rspamd_regex_map);?></textarea>
+              </div>
+            </div>
+            <div class="form-group">
+              <div class="col-sm-offset-3 col-sm-9">
+                <button class="btn btn-xs btn-default validate_rspamd_regex" data-regex-map="<?=$rspamd_regex_map;?>" href="#"><?=$lang['add']['validate'];?></button>
+                <button class="btn btn-xs btn-success submit_rspamd_regex" data-action="edit_selected" data-id="<?=$rspamd_regex_map;?>" data-item="<?=htmlspecialchars($rspamd_regex_map);?>" data-api-url='edit/rspamd-map' data-api-attr='{}' href="#" disabled><?=$lang['edit']['save'];?></button>
+              </div>
+            </div>
+          </form>
+          <?php
+          endforeach;
+          ?>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   </div> <!-- /tab-content -->
   </div> <!-- /col-md-12 -->
   </div> <!-- /row -->
@@ -1155,6 +1308,7 @@ echo "var log_pagination_size = '". $LOG_PAGINATION_SIZE . "';\n";
 </script>
 <?php
 $js_minifier->add('/web/js/site/admin.js');
+$js_minifier->add('/web/js/presets/rspamd.js');
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/footer.inc.php';
 } else {
 	header('Location: /');

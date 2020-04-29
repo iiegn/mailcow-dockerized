@@ -1,4 +1,7 @@
 <?php
+function is_valid_regex($exp) {
+  return @preg_match($exp, '') !== false;
+}
 function isset_has_content($var) {
   if (isset($var) && $var != "") {
     return true;
@@ -552,6 +555,9 @@ function formatBytes($size, $precision = 2) {
 	return round(pow(1024, $base - floor($base)), $precision) . $suffixes[floor($base)];
 }
 function update_sogo_static_view() {
+  if (getenv('SKIP_SOGO') == "y") {
+    return true;
+  }
   global $pdo;
   global $lang;
   $stmt = $pdo->query("SELECT 'OK' FROM INFORMATION_SCHEMA.TABLES
@@ -1068,9 +1074,10 @@ function verify_tfa_login($username, $token) {
   case "u2f":
     try {
       $reg = $u2f->doAuthenticate(json_decode($_SESSION['authReq']), get_u2f_registrations($username), json_decode($token));
-      $stmt = $pdo->prepare("UPDATE `tfa` SET `counter` = ? WHERE `id` = ?");
-      $stmt->execute(array($reg->counter, $reg->id));
-      $_SESSION['tfa_id'] = $reg->id;
+      $stmt = $pdo->prepare("SELECT `id` FROM `tfa` WHERE `keyHandle` = ?");
+      $stmt->execute(array($reg->keyHandle));
+      $row_key_id = $stmt->fetch(PDO::FETCH_ASSOC);
+      $_SESSION['tfa_id'] = $row_key_id['id'];
       $_SESSION['authReq'] = null;
       $_SESSION['return'][] =  array(
         'type' => 'success',
@@ -1142,7 +1149,7 @@ function verify_tfa_login($username, $token) {
 	}
   return false;
 }
-function admin_api($action, $data = null) {
+function admin_api($access, $action, $data = null) {
 	global $pdo;
 	global $lang;
 	if ($_SESSION['mailcow_cc_role'] != "admin") {
@@ -1153,74 +1160,177 @@ function admin_api($action, $data = null) {
 		);
 		return false;
 	}
-	switch ($action) {
-		case "edit":
-      $regen_key = $data['admin_api_regen_key'];
-      $active = (isset($data['active'])) ? 1 : 0;
-      $allow_from = array_map('trim', preg_split( "/( |,|;|\n)/", $data['allow_from']));
-      foreach ($allow_from as $key => $val) {
-        if (!filter_var($val, FILTER_VALIDATE_IP)) {
-          $_SESSION['return'][] =  array(
-            'type' => 'warning',
-            'log' => array(__FUNCTION__, $data),
-            'msg' => array('ip_invalid', htmlspecialchars($allow_from[$key]))
-          );
-          unset($allow_from[$key]);
-          continue;
-        }
+	switch ($access) {
+    case "rw":
+      switch ($action) {
+        case "edit":
+          $active = (isset($data['active'])) ? 1 : 0;
+          $skip_ip_check = (isset($data['skip_ip_check'])) ? 1 : 0;
+          $allow_from = array_map('trim', preg_split( "/( |,|;|\n)/", $data['allow_from']));
+          foreach ($allow_from as $key => $val) {
+            if (empty($val)) {
+              continue;
+            }
+            if (!filter_var($val, FILTER_VALIDATE_IP)) {
+              $_SESSION['return'][] =  array(
+                'type' => 'warning',
+                'log' => array(__FUNCTION__, $data),
+                'msg' => array('ip_invalid', htmlspecialchars($allow_from[$key]))
+              );
+              unset($allow_from[$key]);
+              continue;
+            }
+          }
+          $allow_from = implode(',', array_unique(array_filter($allow_from)));
+          if (empty($allow_from) && $skip_ip_check == 0) {
+            $_SESSION['return'][] =  array(
+              'type' => 'danger',
+              'log' => array(__FUNCTION__, $data),
+              'msg' => 'ip_list_empty'
+            );
+            return false;
+          }
+          $api_key = implode('-', array(
+            strtoupper(bin2hex(random_bytes(3))),
+            strtoupper(bin2hex(random_bytes(3))),
+            strtoupper(bin2hex(random_bytes(3))),
+            strtoupper(bin2hex(random_bytes(3))),
+            strtoupper(bin2hex(random_bytes(3)))
+          ));
+          $stmt = $pdo->query("SELECT `api_key` FROM `api` WHERE `access` = 'rw'");
+          $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
+          if (empty($num_results)) {
+            $stmt = $pdo->prepare("INSERT INTO `api` (`api_key`, `skip_ip_check`, `active`, `allow_from`, `access`)
+              VALUES (:api_key, :skip_ip_check, :active, :allow_from, 'rw');");
+            $stmt->execute(array(
+              ':api_key' => $api_key,
+              ':skip_ip_check' => $skip_ip_check,
+              ':active' => $active,
+              ':allow_from' => $allow_from
+            ));
+          }
+          else {
+            if ($skip_ip_check == 0) {
+              $stmt = $pdo->prepare("UPDATE `api` SET `skip_ip_check` = :skip_ip_check, `active` = :active, `allow_from` = :allow_from WHERE `access` = 'rw';");
+              $stmt->execute(array(
+                ':active' => $active,
+                ':skip_ip_check' => $skip_ip_check,
+                ':allow_from' => $allow_from
+              ));
+            }
+            else {
+              $stmt = $pdo->prepare("UPDATE `api` SET `skip_ip_check` = :skip_ip_check, `active` = :active WHERE `access` = 'rw';");
+              $stmt->execute(array(
+                ':active' => $active,
+                ':skip_ip_check' => $skip_ip_check
+              ));
+            }
+          }
+        break;
+        case "regen_key":
+          $api_key = implode('-', array(
+            strtoupper(bin2hex(random_bytes(3))),
+            strtoupper(bin2hex(random_bytes(3))),
+            strtoupper(bin2hex(random_bytes(3))),
+            strtoupper(bin2hex(random_bytes(3))),
+            strtoupper(bin2hex(random_bytes(3)))
+          ));
+          $stmt = $pdo->prepare("UPDATE `api` SET `api_key` = :api_key WHERE `access` = 'rw'");
+          $stmt->execute(array(
+            ':api_key' => $api_key
+          ));
+        break;
+        case "get":
+          $stmt = $pdo->query("SELECT * FROM `api` WHERE `access` = 'rw'");
+          $apidata = $stmt->fetch(PDO::FETCH_ASSOC);
+          return $apidata;
+        break;
       }
-      $allow_from = implode(',', array_unique(array_filter($allow_from)));
-      if (empty($allow_from)) {
-        $_SESSION['return'][] =  array(
-          'type' => 'danger',
-          'log' => array(__FUNCTION__, $data),
-          'msg' => 'ip_list_empty'
-        );
-        return false;
+    case "ro":
+      switch ($action) {
+        case "edit":
+          $active = (isset($data['active'])) ? 1 : 0;
+          $skip_ip_check = (isset($data['skip_ip_check'])) ? 1 : 0;
+          $allow_from = array_map('trim', preg_split( "/( |,|;|\n)/", $data['allow_from']));
+          foreach ($allow_from as $key => $val) {
+            if (empty($val)) {
+              continue;
+            }
+            if (!filter_var($val, FILTER_VALIDATE_IP)) {
+              $_SESSION['return'][] =  array(
+                'type' => 'warning',
+                'log' => array(__FUNCTION__, $data),
+                'msg' => array('ip_invalid', htmlspecialchars($allow_from[$key]))
+              );
+              unset($allow_from[$key]);
+              continue;
+            }
+          }
+          $allow_from = implode(',', array_unique(array_filter($allow_from)));
+          if (empty($allow_from) && $skip_ip_check == 0) {
+            $_SESSION['return'][] =  array(
+              'type' => 'danger',
+              'log' => array(__FUNCTION__, $data),
+              'msg' => 'ip_list_empty'
+            );
+            return false;
+          }
+          $api_key = implode('-', array(
+            strtoupper(bin2hex(random_bytes(3))),
+            strtoupper(bin2hex(random_bytes(3))),
+            strtoupper(bin2hex(random_bytes(3))),
+            strtoupper(bin2hex(random_bytes(3))),
+            strtoupper(bin2hex(random_bytes(3)))
+          ));
+          $stmt = $pdo->query("SELECT `api_key` FROM `api` WHERE `access` = 'ro'");
+          $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
+          if (empty($num_results)) {
+            $stmt = $pdo->prepare("INSERT INTO `api` (`api_key`, `skip_ip_check`, `active`, `allow_from`, `access`)
+              VALUES (:api_key, :skip_ip_check, :active, :allow_from, 'ro');");
+            $stmt->execute(array(
+              ':api_key' => $api_key,
+              ':skip_ip_check' => $skip_ip_check,
+              ':active' => $active,
+              ':allow_from' => $allow_from
+            ));
+          }
+          else {
+            if ($skip_ip_check == 0) {
+              $stmt = $pdo->prepare("UPDATE `api` SET `skip_ip_check` = :skip_ip_check, `active` = :active, `allow_from` = :allow_from WHERE `access` = 'ro';");
+              $stmt->execute(array(
+                ':active' => $active,
+                ':skip_ip_check' => $skip_ip_check,
+                ':allow_from' => $allow_from
+              ));
+            }
+            else {
+              $stmt = $pdo->prepare("UPDATE `api` SET `skip_ip_check` = :skip_ip_check, `active` = :active WHERE `access` = 'ro';");
+              $stmt->execute(array(
+                ':active' => $active,
+                ':skip_ip_check' => $skip_ip_check
+              ));
+            }
+          }
+        break;
+        case "regen_key":
+          $api_key = implode('-', array(
+            strtoupper(bin2hex(random_bytes(3))),
+            strtoupper(bin2hex(random_bytes(3))),
+            strtoupper(bin2hex(random_bytes(3))),
+            strtoupper(bin2hex(random_bytes(3))),
+            strtoupper(bin2hex(random_bytes(3)))
+          ));
+          $stmt = $pdo->prepare("UPDATE `api` SET `api_key` = :api_key WHERE `access` = 'ro'");
+          $stmt->execute(array(
+            ':api_key' => $api_key
+          ));
+        break;
+        case "get":
+          $stmt = $pdo->query("SELECT * FROM `api` WHERE `access` = 'ro'");
+          $apidata = $stmt->fetch(PDO::FETCH_ASSOC);
+          return $apidata;
+        break;
       }
-      $api_key = implode('-', array(
-        strtoupper(bin2hex(random_bytes(3))),
-        strtoupper(bin2hex(random_bytes(3))),
-        strtoupper(bin2hex(random_bytes(3))),
-        strtoupper(bin2hex(random_bytes(3))),
-        strtoupper(bin2hex(random_bytes(3)))
-      ));
-      $stmt = $pdo->query("SELECT `api_key` FROM `api`");
-      $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
-      if (empty($num_results)) {
-        $stmt = $pdo->prepare("INSERT INTO `api` (`api_key`, `active`, `allow_from`)
-          VALUES (:api_key, :active, :allow_from);");
-        $stmt->execute(array(
-          ':api_key' => $api_key,
-          ':active' => $active,
-          ':allow_from' => $allow_from
-        ));
-      }
-      else {
-        $stmt = $pdo->prepare("UPDATE `api` SET `active` = :active, `allow_from` = :allow_from ;");
-        $stmt->execute(array(
-          ':active' => $active,
-          ':allow_from' => $allow_from
-        ));
-      }
-    break;
-    case "regen_key":
-      $api_key = implode('-', array(
-        strtoupper(bin2hex(random_bytes(3))),
-        strtoupper(bin2hex(random_bytes(3))),
-        strtoupper(bin2hex(random_bytes(3))),
-        strtoupper(bin2hex(random_bytes(3))),
-        strtoupper(bin2hex(random_bytes(3)))
-      ));
-      $stmt = $pdo->prepare("UPDATE `api` SET `api_key` = :api_key");
-      $stmt->execute(array(
-        ':api_key' => $api_key
-      ));
-    break;
-    case "get":
-      $stmt = $pdo->query("SELECT * FROM `api`");
-      $apidata = $stmt->fetch(PDO::FETCH_ASSOC);
-      return $apidata;
     break;
   }
 	$_SESSION['return'][] =  array(
@@ -1259,17 +1369,25 @@ function license($action, $data = null) {
           $_SESSION['gal']['valid'] = "true";
           $_SESSION['gal']['c'] = $json_return['c'];
           $_SESSION['gal']['s'] = $json_return['s'];
-                  }
+          if ($json_return['m'] == 'NoMoore') {
+            $_SESSION['gal']['m'] = '🐄';
+          }
+          else {
+            $_SESSION['gal']['m'] = str_repeat('🐄', substr_count($json_return['m'], 'o'));
+          }
+        }
         elseif ($json_return['response'] === "invalid") {
           $_SESSION['gal']['valid'] = "false";
           $_SESSION['gal']['c'] = $lang['mailbox']['no'];
           $_SESSION['gal']['s'] = $lang['mailbox']['no'];
+          $_SESSION['gal']['m'] = $lang['mailbox']['no'];
         }
       }
       else {
         $_SESSION['gal']['valid'] = "false";
         $_SESSION['gal']['c'] = $lang['danger']['temp_error'];
         $_SESSION['gal']['s'] = $lang['danger']['temp_error'];
+        $_SESSION['gal']['m'] = $lang['danger']['temp_error'];
       }
       try {
         // json_encode needs "true"/"false" instead of true/false, to not encode it to 0 or 1
@@ -1612,4 +1730,33 @@ function solr_status() {
   }
   return false;
 }
+
+function cleanupJS($ignore = '', $folder = '/tmp/*.js') {
+  $now = time();
+  foreach (glob($folder) as $filename) {
+    if(strpos($filename, $ignore) !== false) {
+      continue;
+    }
+    if (is_file($filename)) {
+      if ($now - filemtime($filename) >= 60 * 60) {
+        unlink($filename);
+      }
+    }
+  }
+}
+
+function cleanupCSS($ignore = '', $folder = '/tmp/*.css') {
+  $now = time();
+  foreach (glob($folder) as $filename) {
+    if(strpos($filename, $ignore) !== false) {
+      continue;
+    }
+    if (is_file($filename)) {
+      if ($now - filemtime($filename) >= 60 * 60) {
+        unlink($filename);
+      }
+    }
+  }
+}
+
 ?>

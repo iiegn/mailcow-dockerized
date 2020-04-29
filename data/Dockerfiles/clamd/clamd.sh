@@ -18,9 +18,15 @@ if [[ -s /etc/clamav/whitelist.ign2 ]]; then
   echo "Copying non-empty whitelist.ign2 to /var/lib/clamav/whitelist.ign2"
   cp /etc/clamav/whitelist.ign2 /var/lib/clamav/whitelist.ign2
 fi
+
 if [[ ! -f /var/lib/clamav/whitelist.ign2 ]]; then
   echo "Creating /var/lib/clamav/whitelist.ign2"
-  echo "Example-Signature.Ignore-1" > /var/lib/clamav/whitelist.ign2
+  cat <<EOF > /var/lib/clamav/whitelist.ign2
+# Please restart ClamAV after changing signatures
+Example-Signature.Ignore-1
+PUA.Win.Trojan.EmbeddedPDF-1
+PUA.Pdf.Trojan.EmbeddedJavaScript-1
+EOF
 fi
 
 chown clamav:clamav -R /var/lib/clamav /run/clamav
@@ -29,27 +35,29 @@ chmod 755 /var/lib/clamav
 chmod 644 -R /var/lib/clamav/*
 chmod 750 /run/clamav
 
-echo "Stating whitelist.ign2"
 stat /var/lib/clamav/whitelist.ign2
-
 dos2unix /var/lib/clamav/whitelist.ign2
-
 sed -i '/^\s*$/d' /var/lib/clamav/whitelist.ign2
+# Copying to /etc/clamav to expose file as-is to administrator
+cp -p /var/lib/clamav/whitelist.ign2 /etc/clamav/whitelist.ign2
+
 
 BACKGROUND_TASKS=()
 
+echo "Running freshclam..."
+freshclam
+
 (
 while true; do
-  sleep 1m
+  sleep 12600
   freshclam
-  sleep 1h
 done
 ) &
 BACKGROUND_TASKS+=($!)
 
 (
 while true; do
-  sleep 2m
+  sleep 10m
   SANE_MIRRORS="$(dig +ignore +short rsync.sanesecurity.net)"
   for sane_mirror in ${SANE_MIRRORS}; do
     CE=
@@ -69,11 +77,15 @@ while true; do
     CE=$?
     chmod 755 /var/lib/clamav/
     if [ ${CE} -eq 0 ]; then
-      echo RELOAD | nc localhost 3310
+      while [ ! -z "$(pidof freshclam)" ]; do
+        echo "Freshclam is active, waiting..."
+        sleep 5
+      done
+      echo RELOAD | nc clamd-mailcow 3310
       break
     fi
   done
-  sleep 30h
+  sleep 12h
 done
 ) &
 BACKGROUND_TASKS+=($!)

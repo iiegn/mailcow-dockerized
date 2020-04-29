@@ -7,7 +7,7 @@ table.footable>tbody>tr.footable-empty>td {
   text-decoration: none !important;
 }
 
-.panel panel-default {
+.panel.panel-default {
   overflow: visible !important;
 }
 
@@ -15,10 +15,8 @@ table.footable>tbody>tr.footable-empty>td {
   overflow: visible !important;
 }
 
-@media screen and (max-width: 767px) {
-  .table-responsive {
-    overflow-x: scroll !important;
-  }
+.table-responsive {
+  overflow-x: scroll !important;
 }
 
 .footer-add-item {
@@ -71,9 +69,9 @@ span#qid_detail_score {
 
 span.rspamd-symbol {
   display: inline-block;
-  margin: 2px 6px 2px 0px;
+  margin: 2px 6px 2px 0;
   border-radius: 4px;
-  padding: 0px 7px;
+  padding: 0 7px;
 }
 
 span.rspamd-symbol.positive {
@@ -103,7 +101,6 @@ span.mail-address-item {
   border-radius: 4px;
   border: 1px solid #ccc;
   padding: 2px 7px;
-  margin-right: 7px;
   display: inline-block;
   margin: 2px 6px 2px 0;
 }
