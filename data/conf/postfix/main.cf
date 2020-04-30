@@ -82,7 +82,6 @@ proxy_read_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_trans
   proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_sender_acl.cf,
   proxy:mysql:/opt/postfix/conf/sql/mysql_tls_policy_override_maps.cf,
   proxy:mysql:/opt/postfix/conf/sql/mysql_sender_dependent_default_transport_maps.cf,
-  proxy:hash:/opt/postfix/conf/check_sasl_access,
   proxy:hash:/opt/postfix/conf/sasl_passwd,
   proxy:mysql:/opt/postfix/conf/sql/mysql_transport_maps.cf,
   proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_sender_dependent.cf,
@@ -136,8 +135,7 @@ smtpd_sasl_authenticated_header = yes
 smtpd_sasl_path = inet:dovecot:10001
 smtpd_sasl_type = dovecot
 smtpd_sender_login_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_sender_acl.cf
-smtpd_sender_restrictions = check_sasl_access hash:/opt/postfix/conf/check_sasl_access,
-  reject_authenticated_sender_login_mismatch,
+smtpd_sender_restrictions = reject_authenticated_sender_login_mismatch,
   permit_mynetworks,
   permit_sasl_authenticated,
   reject_unlisted_sender,
