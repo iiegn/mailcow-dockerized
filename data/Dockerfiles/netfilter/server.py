@@ -467,9 +467,16 @@ def initChain():
     chain = iptc.Chain(iptc.Table(iptc.Table.FILTER), c)
     rule = iptc.Rule()
     rule.src = '0.0.0.0/0'
-    rule.dst = '0.0.0.0/0'
+    dst = '0.0.0.0/0'
+    if c == 'FORWARD':
+        dst = os.getenv('IPV4_NETWORK', '172.22.1') + '.0/24'
+    elif c == 'INPUT':
+        if os.getenv('SNAT_TO_SOURCE'):
+            dst = os.getenv('SNAT_TO_SOURCE') + '/32'
+    rule.dst = dst
     target = iptc.Target(rule, "MAILCOW")
     rule.target = target
+    print(iptc.easy.decode_iptc_rule(rule))
     if rule not in chain.rules:
       chain.insert_rule(rule)
   # IPv6
