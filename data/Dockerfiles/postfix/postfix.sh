@@ -376,10 +376,14 @@ password = ${DBPASS}
 hosts = unix:/var/run/mysqld/mysqld.sock
 dbname = ${DBNAME}
 query = SELECT \'${VIRTUAL_POSTMASTER_DEFAULT}\' AS goto FROM alias
-  WHERE (domain IN
+  WHERE ((domain IN
       (SELECT domain FROM domain
         WHERE domain='%d'
           AND active='1'))
+     OR (domain in
+      (SELECT alias_domain FROM alias_domain
+        WHERE alias_domain='%d'
+          AND active='1')))
     AND ('%s' REGEXP '^(MAILER-DAEMON|postmaster|abuse|webmaster)@')
     LIMIT 1;
 EOF
