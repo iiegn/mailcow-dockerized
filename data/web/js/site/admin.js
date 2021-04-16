@@ -21,6 +21,7 @@ jQuery(function($){
   $("#mass_exclude").change(function(){ $("#mass_include").selectpicker('deselectAll'); });
   $("#mass_include").change(function(){ $("#mass_exclude").selectpicker('deselectAll'); });
   $("#mass_disarm").click(function() { $("#mass_send").attr("disabled", !this.checked); });
+  $(".admin-ays-dialog").click(function() { return confirm(lang.ays); });
   $(".validate_rspamd_regex").click(function( event ) {
     event.preventDefault();
     var regex_map_id = $(this).data('regex-map');
@@ -75,8 +76,8 @@ jQuery(function($){
         {"name":"chkbox","title":"","style":{"maxWidth":"60px","width":"60px"},"filterable": false,"sortable": false,"type":"html"},
         {"sorted": true,"name":"username","title":lang.username,"style":{"width":"250px"}},
         {"name":"selected_domains","title":lang.admin_domains,"breakpoints":"xs sm"},
-        {"name":"tfa_active","title":"TFA", "filterable": false,"style":{"maxWidth":"80px","width":"80px"}},
-        {"name":"active","filterable": false,"style":{"maxWidth":"80px","width":"80px"},"title":lang.active},
+        {"name":"tfa_active","title":"TFA", "filterable": false,"style":{"maxWidth":"80px","width":"80px"},"formatter": function(value){return 1==value?'&#10003;':0==value&&'&#10005;';}},
+        {"name":"active","filterable": false,"style":{"maxWidth":"80px","width":"80px"},"title":lang.active,"formatter": function(value){return 1==value?'&#10003;':0==value&&'&#10005;';}},
         {"name":"action","filterable": false,"sortable": false,"style":{"text-align":"right","maxWidth":"250px","width":"250px"},"type":"html","title":lang.action,"breakpoints":"xs sm"}
       ],
       "rows": $.ajax({
@@ -130,8 +131,8 @@ jQuery(function($){
       "columns": [
         {"name":"chkbox","title":"","style":{"maxWidth":"60px","width":"60px"},"filterable": false,"sortable": false,"type":"html"},
         {"sorted": true,"name":"usr","title":lang.username,"style":{"width":"250px"}},
-        {"name":"tfa_active","title":"TFA", "filterable": false,"style":{"maxWidth":"80px","width":"80px"}},
-        {"name":"active","filterable": false,"style":{"maxWidth":"80px","width":"80px"},"title":lang.active},
+        {"name":"tfa_active","title":"TFA", "filterable": false,"style":{"maxWidth":"80px","width":"80px"},"formatter": function(value){return 1==value?'&#10003;':0==value&&'&#10005;';}},
+        {"name":"active","filterable": false,"style":{"maxWidth":"80px","width":"80px"},"title":lang.active,"formatter": function(value){return 1==value?'&#10003;':0==value&&'&#10005;';}},
         {"name":"action","filterable": false,"sortable": false,"style":{"text-align":"right","maxWidth":"250px","width":"250px"},"type":"html","title":lang.action,"breakpoints":"xs sm"}
       ],
       "rows": $.ajax({
@@ -159,7 +160,7 @@ jQuery(function($){
         {"name":"chkbox","title":"","style":{"maxWidth":"60px","width":"60px"},"filterable": false,"sortable": false,"type":"html"},
         {"name":"host","type":"text","title":lang.host,"style":{"width":"250px"}},
         {"name":"source","title":lang.source,"breakpoints":"xs sm"},
-        {"name":"keep_spam","title":lang.spamfilter, "type": "text","style":{"maxWidth":"80px","width":"80px"}},
+        {"name":"keep_spam","title":lang.spamfilter, "type": "text","style":{"maxWidth":"80px","width":"80px"},"formatter": function(value){return 'yes'==value?'&#10005;':'no'==value&&'&#10003;';}},
         {"name":"action","filterable": false,"sortable": false,"style":{"text-align":"right","maxWidth":"180px","width":"180px"},"type":"html","title":lang.action,"breakpoints":"xs sm"}
       ],
       "rows": $.ajax({
@@ -187,7 +188,7 @@ jQuery(function($){
         {"name":"hostname","type":"text","title":lang.host,"style":{"width":"250px"}},
         {"name":"username","title":lang.username,"breakpoints":"xs sm"},
         {"name":"used_by_domains","title":lang.in_use_by,"style":{"width":"110px"}, "type": "text","breakpoints":"xs sm"},
-        {"name":"active","filterable": false,"style":{"maxWidth":"80px","width":"80px"},"title":lang.active},
+        {"name":"active","filterable": false,"style":{"maxWidth":"80px","width":"80px"},"title":lang.active,"formatter": function(value){return 1==value?'&#10003;':0==value&&'&#10005;';}},
         {"name":"action","filterable": false,"sortable": false,"style":{"text-align":"right","maxWidth":"220px","width":"220px"},"type":"html","title":lang.action,"breakpoints":"xs sm md"}
       ],
       "rows": $.ajax({
@@ -215,7 +216,7 @@ jQuery(function($){
         {"name":"destination","type":"text","title":lang.destination,"style":{"width":"250px"}},
         {"name":"nexthop","type":"text","title":lang.nexthop,"style":{"width":"250px"}},
         {"name":"username","title":lang.username,"breakpoints":"xs sm"},
-        {"name":"active","filterable": false,"style":{"maxWidth":"80px","width":"80px"},"title":lang.active},
+        {"name":"active","filterable": false,"style":{"maxWidth":"80px","width":"80px"},"title":lang.active,"formatter": function(value){return 1==value?'&#10003;':0==value&&'&#10005;';}},
         {"name":"action","filterable": false,"sortable": false,"style":{"text-align":"right","maxWidth":"220px","width":"220px"},"type":"html","title":lang.action,"breakpoints":"xs sm md"}
       ],
       "rows": $.ajax({
@@ -247,6 +248,7 @@ jQuery(function($){
         }},
         {"name":"sender","title":lang.sender, "type": "text","breakpoints":"xs sm"},
         {"name":"recipients","title":lang.recipients, "type": "text","style":{"word-break":"break-all","min-width":"300px"},"breakpoints":"xs sm md"},
+        {"name":"action","filterable": false,"sortable": false,"style":{"text-align":"right","maxWidth":"220px","width":"220px"},"type":"html","title":lang.action,"breakpoints":"xs sm md"}
       ],
       "rows": $.ajax({
         dataType: 'json',
@@ -300,18 +302,15 @@ jQuery(function($){
           return escapeHtml(i);
         });
         item.recipients = rcpts.join('<hr style="margin:1px!important">');
+        item.action = '<div class="btn-group">' +
+          '<a href="#" data-toggle="modal" data-target="#showQueuedMsg" data-queue-id="' + encodeURI(item.queue_id) + '" class="btn btn-xs btn-default">' + lang.queue_show_message + '</a>' +
+          '</div>';
       });
     } else if (table == 'forwardinghoststable') {
       $.each(data, function (i, item) {
         item.action = '<div class="btn-group">' +
           '<a href="#" data-action="delete_selected" data-id="single-fwdhost" data-api-url="delete/fwdhost" data-item="' + encodeURI(item.host) + '" class="btn btn-xs btn-danger"><span class="glyphicon glyphicon-trash"></span> ' + lang.remove + '</a>' +
           '</div>';
-        if (item.keep_spam == "yes") {
-          item.keep_spam = lang.no;
-        }
-        else {
-          item.keep_spam = lang.yes;
-        }
         item.chkbox = '<input type="checkbox" data-id="fwdhosts" name="multi_select" value="' + item.host + '" />';
       });
     } else if (table == 'oauth2clientstable') {
@@ -412,6 +411,22 @@ jQuery(function($){
       $('#transport_type').val(button.data('transport-type'));
     }
   })
+  // Queue item
+  $('#showQueuedMsg').on('show.bs.modal', function (e) {
+    $('#queue_msg_content').text(lang.loading);
+    button = $(e.relatedTarget)
+    if (button != null) {
+      $('#queue_id').text(button.data('queue-id'));
+    }
+    $.ajax({
+        type: 'GET',
+        url: '/api/v1/get/postcat/' + button.data('queue-id'),
+        dataType: 'text',
+        complete: function (data) {
+          $('#queue_msg_content').text(data.responseText);
+        }
+    });
+  })
   $('#test_transport').on('click', function (e) {
     e.preventDefault();
     prev = $('#test_transport').text();
@@ -438,12 +453,26 @@ jQuery(function($){
       $('#priv_key_pre').text(decoded_key);
     }
   })
+  // FIDO2 friendly name modal
+  $('#fido2ChangeFn').on('show.bs.modal', function (e) {
+    rename_link = $(e.relatedTarget)
+    if (rename_link != null) {
+      $('#fido2_cid').val(rename_link.data('cid'));
+      $('#fido2_subject_desc').text(Base64.decode(rename_link.data('subject')));
+    }
+  })
   // App links
-  function add_table_row(table_id) {
+  function add_table_row(table_id, type) {
     var row = $('<tr />');
+    if (type == "app_link") {
     cols = '<td><input class="input-sm form-control" data-id="app_links" type="text" name="app" required></td>';
     cols += '<td><input class="input-sm form-control" data-id="app_links" type="text" name="href" required></td>';
-    cols += '<td><a href="#" role="button" class="btn btn-xs btn-default" type="button">Remove row</a></td>';
+    cols += '<td><a href="#" role="button" class="btn btn-xs btn-default" type="button">' + lang.remove_row + '</a></td>';
+    } else if (type == "f2b_regex") {
+    cols = '<td><input style="text-align:center" class="input-sm form-control" data-id="f2b_regex" type="text" value="+" disabled></td>';
+    cols += '<td><input class="input-sm form-control regex-input" data-id="f2b_regex" type="text" name="regex" required></td>';
+    cols += '<td><a href="#" role="button" class="btn btn-xs btn-default" type="button">' + lang.remove_row + '</a></td>';
+    }
     row.append(cols);
     table_id.append(row);
   }
@@ -451,52 +480,15 @@ jQuery(function($){
     e.preventDefault();
     $(this).parents('tr').remove();
   });
+  $('#f2b_regex_table').on('click', 'tr a', function (e) {
+    e.preventDefault();
+    $(this).parents('tr').remove();
+  });
   $('#add_app_link_row').click(function() {
-      add_table_row($('#app_link_table'));
+      add_table_row($('#app_link_table'), "app_link");
+  });
+  $('#add_f2b_regex_row').click(function() {
+      add_table_row($('#f2b_regex_table'), "f2b_regex");
   });
 });
-$(window).load(function(){
-  $('.sidebar').affix({
-        offset: {
-            top: 0
-        }
-    }).on('affix.bs.affix',function(){
-        setAffixContainerSize();
-    });
 
-    /*Setting the width of the sidebar (I took 10px of its value which is the margin between cols in my Bootstrap CSS*/
-    function setAffixContainerSize(){
-        $('.sidebar').width($('.sidebar').parent().innerWidth()-10);
-    }
-
-    $(window).resize(function(){
-        setAffixContainerSize();
-    });
-  initial_width_config = $("#sidebar-admin-config").width();
-  initial_width_maps = $("#sidebar-admin-maps").width();
-  $("#scrollbox-config").css("width", initial_width_config);
-  $("#scrollbox-maps").css("width", initial_width_maps);
-  if (sessionStorage.scrollTop > 70) {
-    $('#scrollbox-config').addClass('scrollboxFixed');
-    $('#scrollbox-maps').addClass('scrollboxFixed');
-  }
-  $(window).bind('scroll', function() {
-    if ($(window).scrollTop() > 70) {
-      $('#scrollbox-config').addClass('scrollboxFixed');
-      $('#scrollbox-maps').addClass('scrollboxFixed');
-    } else {
-      $('#scrollbox-config').removeClass('scrollboxFixed');
-      $('#scrollbox-maps').removeClass('scrollboxFixed');
-    }
-  });
-});
-function resizeScrollbox() {
-  on_resize_width_config = $("#sidebar-admin-config").width();
-  on_resize_width_maps = $("#sidebar-admin-maps").width();
-  $("#scrollbox-config").removeAttr("style");
-  $("#scrollbox-config").css("width", on_resize_width_config);
-  $("#scrollbox-maps").removeAttr("style");
-  $("#scrollbox-maps").css("width", on_resize_width_maps);
-}
-$(window).on('resize', resizeScrollbox);
-$('a[data-toggle="tab"]').on('shown.bs.tab', resizeScrollbox);

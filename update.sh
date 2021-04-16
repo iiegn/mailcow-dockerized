@@ -41,7 +41,17 @@ export LC_ALL=C
 DATE=$(date +%Y-%m-%d_%H_%M_%S)
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-function prefetch_images() {
+check_online_status() {
+  CHECK_ONLINE_IPS=(1.1.1.1 9.9.9.9 8.8.8.8)
+  for ip in "${CHECK_ONLINE_IPS[@]}"; do
+    if timeout 3 ping -c 1 ${ip} > /dev/null; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+prefetch_images() {
   [[ -z ${BRANCH} ]] && { echo -e "\e[33m\nUnknown branch...\e[0m"; exit 1; }
   git fetch origin #${BRANCH}
   while read image; do
@@ -114,6 +124,7 @@ while (($#)); do
       fi
       if [[ -z $(git log HEAD --pretty=format:"%H" | grep "${LATEST_REV}") ]]; then
         echo "Updated code is available."
+        git log --date=short --pretty=format:"%ad - %s" $(git rev-parse --short HEAD)..origin/master
         exit 0
       else
         echo "No updates available."
@@ -140,14 +151,19 @@ while (($#)); do
       echo -e "\e[32mForcing Update...\e[0m"
       FORCE=y
     ;;
+    --no-update-compose)
+      NO_UPDATE_COMPOSE=y
+    ;;
     --help|-h)
-    echo './update.sh [-c|--check, --ours, --gc, --skip-start, -h|--help]
+    echo './update.sh [-c|--check, --ours, --gc, --no-update-compose, --prefetch, --skip-start, -f|--force, -h|--help]
 
-  -c|--check   -   Check for updates and exit (exit codes => 0: update available, 3: no updates)
-  --ours       -   Use merge strategy "ours" to solve conflicts in favor of non-mailcow code (local changes)
-  --gc         -   Run garbage collector to delete old image tags
-  --skip-start -   Do not start mailcow after update
-  -f|--force   -   Force update, do not ask questions
+  -c|--check           -   Check for updates and exit (exit codes => 0: update available, 3: no updates)
+  --ours               -   Use merge strategy option "ours" to solve conflicts in favor of non-mailcow code (local changes over remote changes), not recommended!
+  --gc                 -   Run garbage collector to delete old image tags
+  --no-update-compose  -   Do not update docker-compose
+  --prefetch           -   Only prefetch new images and exit (useful to prepare updates)
+  --skip-start         -   Do not start mailcow after update
+  -f|--force           -   Force update, do not ask questions
 '
     exit 1
   esac
@@ -164,8 +180,9 @@ if [ ${#DOTS} -lt 2 ]; then
   exit 1
 fi
 
-if grep --help 2>&1 | head -n 1 | grep -q -i "busybox"; then echo "BusybBox grep detected, please install gnu grep, \"apk add --no-cache --upgrade grep\""; exit 1; fi
-if cp --help 2>&1 | head -n 1 | grep -q -i "busybox"; then echo "BusybBox cp detected, please install coreutils, \"apk add --no-cache --upgrade coreutils\""; exit 1; fi
+if grep --help 2>&1 | head -n 1 | grep -q -i "busybox"; then echo "BusyBox grep detected, please install gnu grep, \"apk add --no-cache --upgrade grep\""; exit 1; fi
+if cp --help 2>&1 | head -n 1 | grep -q -i "busybox"; then echo "BusyBox cp detected, please install coreutils, \"apk add --no-cache --upgrade coreutils\""; exit 1; fi
+if sed --help 2>&1 | head -n 1 | grep -q -i "busybox"; then echo "BusyBox sed detected, please install gnu sed, \"apk add --no-cache --upgrade sed\""; exit 1; fi
 
 CONFIG_ARRAY=(
   "SKIP_LETS_ENCRYPT"
@@ -174,6 +191,7 @@ CONFIG_ARRAY=(
   "WATCHDOG_NOTIFY_EMAIL"
   "WATCHDOG_NOTIFY_BAN"
   "WATCHDOG_EXTERNAL_CHECKS"
+  "WATCHDOG_SUBJECT"
   "SKIP_CLAMD"
   "SKIP_IP_CHECK"
   "ADDITIONAL_SAN"
@@ -198,9 +216,16 @@ CONFIG_ARRAY=(
   "SKIP_HTTP_VERIFICATION"
   "SOGO_EXPIRE_SESSION"
   "REDIS_PORT"
+  "DOVECOT_MASTER_USER"
+  "DOVECOT_MASTER_PASS"
+  "MAILCOW_PASS_SCHEME"
+  "XMPP_C2S_PORT"
+  "XMPP_S2S_PORT"
+  "XMPP_HTTPS_PORT"
+  "ADDITIONAL_SERVER_NAMES"
 )
 
-sed -i '$a\' mailcow.conf
+sed -i --follow-symlinks '$a\' mailcow.conf
 for option in ${CONFIG_ARRAY[@]}; do
   if [[ ${option} == "ADDITIONAL_SAN" ]]; then
     if ! grep -q ${option} mailcow.conf; then
@@ -262,6 +287,7 @@ for option in ${CONFIG_ARRAY[@]}; do
     if ! grep -q ${option} mailcow.conf; then
       echo "Adding new option \"${option}\" to mailcow.conf"
       echo '# Must be set for API_KEY to be active' >> mailcow.conf
+      echo '# IPs only, no networks (networks can be set via UI)' >> mailcow.conf
       echo "#API_ALLOW_FROM=" >> mailcow.conf
     fi
   elif [[ ${option} == "SNAT_TO_SOURCE" ]]; then
@@ -301,7 +327,7 @@ for option in ${CONFIG_ARRAY[@]}; do
       echo '# Solr is a prone to run OOM on large systems and should be monitored. Unmonitored Solr setups are not recommended.' >> mailcow.conf
       echo '# Solr will refuse to start with total system memory below or equal to 2 GB.' >> mailcow.conf
       echo "SOLR_HEAP=1024" >> mailcow.conf
-  fi
+    fi
   elif [[ ${option} == "SKIP_SOLR" ]]; then
     if ! grep -q ${option} mailcow.conf; then
       echo "Adding new option \"${option}\" to mailcow.conf"
@@ -329,13 +355,19 @@ for option in ${CONFIG_ARRAY[@]}; do
       echo '# MAILDIR_SUB defines a path in a users virtual home to keep the maildir in. Leave empty for updated setups.' >> mailcow.conf
       echo "#MAILDIR_SUB=Maildir" >> mailcow.conf
       echo "MAILDIR_SUB=" >> mailcow.conf
-  fi
+    fi
   elif [[ ${option} == "WATCHDOG_NOTIFY_BAN" ]]; then
     if ! grep -q ${option} mailcow.conf; then
       echo "Adding new option \"${option}\" to mailcow.conf"
       echo '# Notify about banned IP. Includes whois lookup.' >> mailcow.conf
       echo "WATCHDOG_NOTIFY_BAN=y" >> mailcow.conf
-  fi
+    fi
+  elif [[ ${option} == "WATCHDOG_SUBJECT" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "Adding new option \"${option}\" to mailcow.conf"
+      echo '# Subject for watchdog mails. Defaults to "Watchdog ALERT" followed by the error message.' >> mailcow.conf
+      echo "#WATCHDOG_SUBJECT=" >> mailcow.conf
+    fi
   elif [[ ${option} == "WATCHDOG_EXTERNAL_CHECKS" ]]; then
     if ! grep -q ${option} mailcow.conf; then
       echo "Adding new option \"${option}\" to mailcow.conf"
@@ -343,18 +375,64 @@ for option in ${CONFIG_ARRAY[@]}; do
       echo '# No data is collected. Opt-in and anonymous.' >> mailcow.conf
       echo '# Will only work with unmodified mailcow setups.' >> mailcow.conf
       echo "WATCHDOG_EXTERNAL_CHECKS=n" >> mailcow.conf
-  fi
+    fi
   elif [[ ${option} == "SOGO_EXPIRE_SESSION" ]]; then
     if ! grep -q ${option} mailcow.conf; then
       echo "Adding new option \"${option}\" to mailcow.conf"
       echo '# SOGo session timeout in minutes' >> mailcow.conf
       echo "SOGO_EXPIRE_SESSION=480" >> mailcow.conf
-  fi
+    fi
   elif [[ ${option} == "REDIS_PORT" ]]; then
     if ! grep -q ${option} mailcow.conf; then
       echo "Adding new option \"${option}\" to mailcow.conf"
       echo "REDIS_PORT=127.0.0.1:7654" >> mailcow.conf
-  fi
+    fi
+  elif [[ ${option} == "DOVECOT_MASTER_USER" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "Adding new option \"${option}\" to mailcow.conf"
+      echo '# DOVECOT_MASTER_USER and _PASS must _both_ be provided. No special chars.' >> mailcow.conf
+      echo '# Empty by default to auto-generate master user and password on start.' >> mailcow.conf
+      echo '# User expands to DOVECOT_MASTER_USER@mailcow.local' >> mailcow.conf
+      echo '# LEAVE EMPTY IF UNSURE' >> mailcow.conf
+      echo "DOVECOT_MASTER_USER=" >> mailcow.conf
+    fi
+  elif [[ ${option} == "DOVECOT_MASTER_PASS" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "Adding new option \"${option}\" to mailcow.conf"
+      echo '# LEAVE EMPTY IF UNSURE' >> mailcow.conf
+      echo "DOVECOT_MASTER_PASS=" >> mailcow.conf
+    fi
+  elif [[ ${option} == "MAILCOW_PASS_SCHEME" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "Adding new option \"${option}\" to mailcow.conf"
+      echo '# Password hash algorithm' >> mailcow.conf
+      echo '# Only certain password hash algorithm are supported. For a fully list of supported schemes,' >> mailcow.conf
+      echo '# see https://mailcow.github.io/mailcow-dockerized-docs/model-passwd/' >> mailcow.conf
+      echo "MAILCOW_PASS_SCHEME=BLF-CRYPT" >> mailcow.conf
+    fi
+  elif [[ ${option} == "XMPP_C2S_PORT" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "XMPP_C2S_PORT=5222" >> mailcow.conf
+    fi
+  elif [[ ${option} == "XMPP_S2S_PORT" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "XMPP_S2S_PORT=5269" >> mailcow.conf
+    fi
+  elif [[ ${option} == "ADDITIONAL_SERVER_NAMES" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo '# Additional server names for mailcow UI' >> mailcow.conf
+      echo '#' >> mailcow.conf
+      echo '# Specify alternative addresses for the mailcow UI to respond to' >> mailcow.conf
+      echo '# This is useful when you set mail.* as ADDITIONAL_SAN and want to make sure mail.maildomain.com will always point to the mailcow UI.' >> mailcow.conf
+      echo '# If the server name does not match a known site, Nginx decides by best-guess and may redirect users to the wrong web root.' >> mailcow.conf
+      echo '# You can understand this as server_name directive in Nginx.' >> mailcow.conf
+      echo '# Comma separated list without spaces! Example: ADDITIONAL_SERVER_NAMES=a.b.c,d.e.f' >> mailcow.conf
+      echo 'ADDITIONAL_SERVER_NAMES=' >> mailcow.conf
+    fi
+  elif [[ ${option} == "XMPP_HTTPS_PORT" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "XMPP_HTTPS_PORT=5443" >> mailcow.conf
+    fi
   elif ! grep -q ${option} mailcow.conf; then
     echo "Adding new option \"${option}\" to mailcow.conf"
     echo "${option}=n" >> mailcow.conf
@@ -362,8 +440,7 @@ for option in ${CONFIG_ARRAY[@]}; do
 done
 
 echo -en "Checking internet connection... "
-timeout 3 ping -c 1 9.9.9.9 > /dev/null
-if [[ $? != 0 ]]; then
+if ! check_online_status; then
   echo -e "\e[31mfailed\e[0m"
   exit 1
 else
@@ -402,6 +479,12 @@ if ! docker-compose config -q; then
   exit 1
 fi
 
+echo -e "\e[32mChecking for conflicting bridges...\e[0m"
+MAILCOW_BRIDGE=$(docker-compose config | grep -i com.docker.network.bridge.name | cut -d':' -f2)
+while read NAT_ID; do
+  iptables -t nat -D POSTROUTING $NAT_ID
+done < <(iptables -L -vn -t nat --line-numbers | grep $IPV4_NETWORK | grep -E 'MASQUERADE.*all' | grep -v ${MAILCOW_BRIDGE} | cut -d' ' -f1)
+
 DIFF_DIRECTORY=update_diffs
 DIFF_FILE=${DIFF_DIRECTORY}/diff_before_update_$(date +"%Y-%m-%d-%H-%M-%S")
 mv diff_before_update* ${DIFF_DIRECTORY}/ 2> /dev/null
@@ -424,6 +507,8 @@ sleep 2
 for container in "${MAILCOW_CONTAINERS[@]}"; do
   docker rm -f "$container" 2> /dev/null
 done
+
+[[ -f data/conf/nginx/ejabberd.conf ]] && mv data/conf/nginx/ejabberd.conf data/conf/nginx/ZZZ-ejabberd.conf
 
 # Silently fixing remote url from andryyy to mailcow
 git remote set-url origin https://github.com/mailcow/mailcow-dockerized
@@ -457,25 +542,42 @@ elif [[ ${MERGE_RETURN} != 0 ]]; then
   exit 1
 fi
 
-echo -e "\e[32mFetching new docker-compose version...\e[0m"
-sleep 2
-if [[ ! -z $(which pip) && $(pip list --local 2>&1 | grep -v DEPRECATION | grep -c docker-compose) == 1 ]]; then
-  true
-  #prevent breaking a working docker-compose installed with pip
-elif [[ $(curl -sL -w "%{http_code}" https://www.servercow.de/docker-compose/latest.php -o /dev/null) == "200" ]]; then
-  LATEST_COMPOSE=$(curl -#L https://www.servercow.de/docker-compose/latest.php)
-  COMPOSE_VERSION=$(docker-compose version --short)
-  if [[ "$LATEST_COMPOSE" != "$COMPOSE_VERSION" ]]; then
-    COMPOSE_PATH=$(which docker-compose) 
-    if [[ -w ${COMPOSE_PATH} ]]; then
-      curl -#L https://github.com/docker/compose/releases/download/${LATEST_COMPOSE}/docker-compose-$(uname -s)-$(uname -m) > $COMPOSE_PATH
-      chmod +x $COMPOSE_PATH
-    else
-      echo -e "\e[33mWARNING: $COMPOSE_PATH is not writable, but new version $LATEST_COMPOSE is available (installed: $COMPOSE_VERSION)\e[0m"
-    fi
-  fi
+if [[ ${NO_UPDATE_COMPOSE} == "y" ]]; then
+  echo -e "\e[33mNot fetching latest docker-compose, please check for updates manually!\e[0m"
+elif [[ -e /etc/alpine-release ]]; then
+  echo -e "\e[33mNot fetching latest docker-compose, because you are using Alpine Linux without glibc support. Please update docker-compose via apk!\e[0m"
 else
-  echo -e "\e[33mCannot determine latest docker-compose version, skipping...\e[0m"
+  echo -e "\e[32mFetching new docker-compose version...\e[0m"
+  echo -e "\e[32mTrying to determine GLIBC version...\e[0m"
+  if ldd --version > /dev/null; then
+    GLIBC_V=$(ldd --version | grep -E '(GLIBC|GNU libc)' | rev | cut -d ' ' -f1 | rev | cut -d '.' -f2)
+    if [ ! -z "${GLIBC_V}" ] && [ ${GLIBC_V} -gt 27 ]; then
+      DC_DL_SUFFIX=
+    else
+      DC_DL_SUFFIX=legacy
+    fi
+  else
+    DC_DL_SUFFIX=legacy
+  fi
+  sleep 1
+  if [[ ! -z $(which pip) && $(pip list --local 2>&1 | grep -v DEPRECATION | grep -c docker-compose) == 1 ]]; then
+    true
+    #prevent breaking a working docker-compose installed with pip
+  elif [[ $(curl -sL -w "%{http_code}" https://www.servercow.de/docker-compose/latest.php?vers=${DC_DL_SUFFIX} -o /dev/null) == "200" ]]; then
+    LATEST_COMPOSE=$(curl -#L https://www.servercow.de/docker-compose/latest.php)
+    COMPOSE_VERSION=$(docker-compose version --short)
+    if [[ "$LATEST_COMPOSE" != "$COMPOSE_VERSION" ]]; then
+      COMPOSE_PATH=$(which docker-compose)
+      if [[ -w ${COMPOSE_PATH} ]]; then
+        curl -#L https://github.com/docker/compose/releases/download/${LATEST_COMPOSE}/docker-compose-$(uname -s)-$(uname -m) > $COMPOSE_PATH
+        chmod +x $COMPOSE_PATH
+      else
+        echo -e "\e[33mWARNING: $COMPOSE_PATH is not writable, but new version $LATEST_COMPOSE is available (installed: $COMPOSE_VERSION)\e[0m"
+      fi
+    fi
+  else
+    echo -e "\e[33mCannot determine latest docker-compose version, skipping...\e[0m"
+  fi
 fi
 
 echo -e "\e[32mFetching new images, if any...\e[0m"
@@ -500,7 +602,10 @@ if grep -q 'SYSCTL_IPV6_DISABLED=1' mailcow.conf; then
 fi
 
 # Checking for old project name bug
-sed -i 's#COMPOSEPROJECT_NAME#COMPOSE_PROJECT_NAME#g' mailcow.conf
+sed -i --follow-symlinks 's#COMPOSEPROJECT_NAME#COMPOSE_PROJECT_NAME#g' mailcow.conf
+# Checking old, wrong bindings
+sed -i --follow-symlinks 's/HTTP_BIND=0.0.0.0/HTTP_BIND=/g' mailcow.conf
+sed -i --follow-symlinks 's/HTTPS_BIND=0.0.0.0/HTTPS_BIND=/g' mailcow.conf
 
 # Fix Rspamd maps
 if [ -f data/conf/rspamd/custom/global_from_blacklist.map ]; then

@@ -12,46 +12,26 @@ use Ddeboer\Imap\Exception\ResourceCheckFailureException;
  */
 final class Server implements ServerInterface
 {
+    private string $hostname;
+    private string $port;
+    private string $flags;
     /**
-     * @var string Internet domain name or bracketed IP address of server
+     * @var mixed[]
      */
-    private $hostname;
-
-    /**
-     * @var string TCP port number
-     */
-    private $port;
-
-    /**
-     * @var string Optional flags
-     */
-    private $flags;
-
-    /**
-     * @var array
-     */
-    private $parameters;
-
-    /**
-     * @var int Connection options
-     */
-    private $options;
-
-    /**
-     * @var int Retries number
-     */
-    private $retries;
+    private array $parameters;
+    private int $options;
+    private int $retries;
 
     /**
      * Constructor.
      *
-     * @param string $hostname   Internet domain name or bracketed IP address
-     *                           of server
-     * @param string $port       TCP port number
-     * @param string $flags      Optional flags
-     * @param array  $parameters Connection parameters
-     * @param int    $options    Connection options
-     * @param int    $retries    Retries number
+     * @param string  $hostname   Internet domain name or bracketed IP address
+     *                            of server
+     * @param string  $port       TCP port number
+     * @param string  $flags      Optional flags
+     * @param mixed[] $parameters Connection parameters
+     * @param int     $options    Connection options
+     * @param int     $retries    Retries number
      */
     public function __construct(
         string $hostname,
@@ -80,16 +60,16 @@ final class Server implements ServerInterface
      * @param string $password Password
      *
      * @throws AuthenticationFailedException
-     *
-     * @return ConnectionInterface
      */
     public function authenticate(string $username, string $password): ConnectionInterface
     {
         $errorMessage = null;
         $errorNumber  = 0;
-        \set_error_handler(static function ($nr, $message) use (&$errorMessage, &$errorNumber) {
+        \set_error_handler(static function ($nr, $message) use (&$errorMessage, &$errorNumber): bool {
             $errorMessage = $message;
             $errorNumber = $nr;
+
+            return true;
         });
 
         $resource = \imap_open(
@@ -133,8 +113,6 @@ final class Server implements ServerInterface
 
     /**
      * Glues hostname, port and flags and returns result.
-     *
-     * @return string
      */
     private function getServerString(): string
     {

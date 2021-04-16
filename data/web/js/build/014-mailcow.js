@@ -24,7 +24,14 @@ $(document).ready(function() {
     $(this).closest("form").find('[data-pwgen-field]').attr('type', 'text');
     $(this).closest("form").find('[data-pwgen-field]').val(random_passwd);
   });
-
+  function str_rot13(str) {
+    return (str + '').replace(/[a-z]/gi, function(s){
+      return String.fromCharCode(s.charCodeAt(0) + (s.toLowerCase() < 'n' ? 13 : -13))
+    })
+  }
+  $(".rot-enc").html(function(){
+    return str_rot13($(this).html())
+  });
   // https://stackoverflow.com/questions/4399005/implementing-jquerys-shake-effect-with-animate
   function shake(div,interval,distance,times) {
       if(typeof interval === 'undefined') {
@@ -88,7 +95,14 @@ $(document).ready(function() {
   // selectpicker
   $('select').selectpicker();
 
-  // haveibeenpwned?
+  // haveibeenpwned and passwd policy
+  $.ajax({
+    url: '/api/v1/get/passwordpolicy/html',
+    type: 'GET',
+    success: function(res) {
+      $(".hibp-out").after(res);
+    }
+  });
   $('[data-hibp]').after('<p class="small haveibeenpwned">↪ Check against haveibeenpwned.com</p><span class="hibp-out"></span>');
   $('[data-hibp]').on('input', function() {
     out_field = $(this).next('.haveibeenpwned').next('.hibp-out').text('').attr('class', 'hibp-out');
@@ -140,6 +154,12 @@ $(document).ready(function() {
         event.preventDefault();
       });
     }
+    if ($(this).is("select")) {
+      $(this).selectpicker('destroy');
+      $(this).replaceWith(function() { 
+        return '<label class="control-label"><b>' + this.innerText + '</b></label>'; 
+      });
+    }
     if ($(this).hasClass('btn-group')) {
       $(this).find('a').each(function(){
         $(this).removeClass('dropdown-toggle')
@@ -176,6 +196,8 @@ $(document).ready(function() {
       $(this).attr("disabled", true);
     } else if ($(this).attr('data-provide') == 'slider') {
       $(this).slider("disable");
+    } else if ($(this).is(':checkbox')) {
+      $(this).attr("disabled", true);
     }
     $(this).data("toggle", "tooltip");
     $(this).attr("title", lang_acl.prohibited);

@@ -11,6 +11,7 @@ $stmt->execute(array(':username' => $token['user_id']));
 $mailbox = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!empty($mailbox)) {
   if ($token['scope'] == 'profile') {
+    header('Content-Type: application/json');
     echo json_encode(array(
       'success' => true,
       'username' => $token['user_id'],
@@ -23,10 +24,6 @@ if (!empty($mailbox)) {
       'active' => (!empty($mailbox['active']) ? $mailbox['active'] : ''),
     ));
     exit;
-  }
-  if ($GLOBALS['OAUTH2_FORGET_SESSION_AFTER_LOGIN'] === true) {
-    session_unset();
-    session_destroy();
   }
 }
 echo json_encode(array(

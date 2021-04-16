@@ -4,6 +4,34 @@ if (!isset($_SESSION['mailcow_cc_role'])) {
 	exit();
 }
 ?>
+<!-- change fido2 fn -->
+<div class="modal fade" id="fido2ChangeFn" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span></button>
+        <h3 class="modal-title"><?=$lang['fido2']['set_fn'];?></h3>
+        <p class="help-block" style="word-break:break-all" id="fido2_subject_desc" data-fido2-subject=""></p>
+      </div>
+      <div class="modal-body">
+        <form class="form-horizontal" data-cached-form="false" data-id="fido2ChangeFn" role="form" method="post" autocomplete="off">
+          <input type="hidden" class="form-control" name="fido2_cid" id="fido2_cid">
+          <div class="form-group">
+            <label class="control-label col-sm-4" for="fido2_fn"><?=$lang['fido2']['fn'];?>:</label>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" name="fido2_fn">
+            </div>
+          </div>
+          <div class="form-group">
+            <div class="col-sm-offset-4 col-sm-8">
+              <button class="btn btn-default" data-action="edit_selected" data-id="fido2ChangeFn" data-item="null" data-api-url='edit/fido2-fn' data-api-attr='{}' href="#"><?=$lang['admin']['save'];?></button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div><!-- add domain admin modal -->
 <!-- add sync job modal -->
 <div class="modal fade" id="addSyncJobModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-lg">
@@ -44,17 +72,17 @@ if (!isset($_SESSION['mailcow_cc_role'])) {
 						<label class="control-label col-sm-2" for="enc1"><?=$lang['add']['enc_method'];?></label>
 						<div class="col-sm-10">
 							<select name="enc1" title="<?=$lang['add']['select'];?>" required>
-                <option selected>TLS</option>
-                <option>SSL</option>
-                <option>PLAIN</option>
+                <option value="SSL" selected>SSL</option>
+                <option value="TLS">STARTTLS</option>
+                <option value="PLAIN">PLAIN</option>
 							</select>
 						</div>
 					</div>
 					<div class="form-group">
 						<label class="control-label col-sm-2" for="mins_interval"><?=$lang['add']['mins_interval'];?></label>
 						<div class="col-sm-10">
-              <input type="number" class="form-control" name="mins_interval" min="1" max="3600" value="20" required>
-              <small class="help-block">1-3600</small>
+              <input type="number" class="form-control" name="mins_interval" min="1" max="43800" value="20" required>
+              <small class="help-block">1-43800</small>
 						</div>
 					</div>
 					<div class="form-group">
@@ -181,13 +209,13 @@ if (!isset($_SESSION['mailcow_cc_role'])) {
           <div class="form-group">
             <label class="control-label col-sm-2" for="app_passwd"><?=$lang['user']['password'];?> (<a href="#" class="generate_password"><?=$lang['user']['generate'];?></a>)</label>
             <div class="col-sm-10">
-            <input type="password" data-pwgen-field="true" data-hibp="true" class="form-control" name="app_passwd" autocomplete="off" required>
+            <input type="password" data-pwgen-field="true" data-hibp="true" class="form-control" name="app_passwd" autocomplete="new-password" required>
             </div>
           </div>
           <div class="form-group">
             <label class="control-label col-sm-2" for="app_passwd2"><?=$lang['user']['password_repeat'];?></label>
             <div class="col-sm-10">
-            <input type="password" data-pwgen-field="true" class="form-control" name="app_passwd2" autocomplete="off" required>
+            <input type="password" data-pwgen-field="true" class="form-control" name="app_passwd2" autocomplete="new-password" required>
             <p class="help-block"><?=$lang['user']['new_password_description'];?></p>
             </div>
           </div>
@@ -228,13 +256,13 @@ if (!isset($_SESSION['mailcow_cc_role'])) {
           <div class="form-group">
             <label class="control-label col-sm-3" for="user_new_pass"><?=$lang['user']['new_password'];?> (<a href="#" class="generate_password"><?=$lang['user']['generate'];?></a>)</label>
             <div class="col-sm-5">
-            <input type="password" data-pwgen-field="true" data-hibp="true" class="form-control" name="user_new_pass" autocomplete="off" required>
+            <input type="password" data-pwgen-field="true" data-hibp="true" class="form-control" name="user_new_pass" autocomplete="new-password" required>
             </div>
           </div>
           <div class="form-group">
             <label class="control-label col-sm-3" for="user_new_pass2"><?=$lang['user']['new_password_repeat'];?></label>
             <div class="col-sm-5">
-            <input type="password" data-pwgen-field="true" class="form-control" name="user_new_pass2" autocomplete="off" required>
+            <input type="password" data-pwgen-field="true" class="form-control" name="user_new_pass2" autocomplete="new-password" required>
             <p class="help-block"><?=$lang['user']['new_password_description'];?></p>
             </div>
           </div>

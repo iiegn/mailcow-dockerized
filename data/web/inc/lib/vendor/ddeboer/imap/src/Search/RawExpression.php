@@ -11,10 +11,8 @@ final class RawExpression implements ConditionInterface
 {
     /**
      * Text to be used for the condition.
-     *
-     * @var string
      */
-    private $expression;
+    private string $expression;
 
     /**
      * @param string $expression text for the condition
@@ -24,9 +22,6 @@ final class RawExpression implements ConditionInterface
         $this->expression = $expression;
     }
 
-    /**
-     * @return string
-     */
     public function toString(): string
     {
         return $this->expression;
