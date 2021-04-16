@@ -32,6 +32,9 @@ $_SESSION['index_query_string'] = $_SERVER['QUERY_STRING'];
         <div class="panel-heading"><span class="glyphicon glyphicon-user" aria-hidden="true"></span> <?= $lang['login']['login']; ?></div>
         <div class="panel-body">
           <div class="text-center mailcow-logo"><img src="<?=($main_logo = customize('get', 'main_logo')) ? $main_logo : '/img/cow_mailcow.svg';?>" alt="mailcow"></div>
+          <?php if (!empty($UI_TEXTS['ui_announcement_text']) && in_array($UI_TEXTS['ui_announcement_type'], array('info', 'warning', 'danger')) && $UI_TEXTS['ui_announcement_active'] == 1) { ?>
+          <div class="alert alert-<?=$UI_TEXTS['ui_announcement_type'];?> rot-enc"><?=str_rot13($UI_TEXTS['ui_announcement_text']);?></div>
+          <?php } ?>
           <legend><?= isset($_SESSION['oauth2_request']) ? $lang['oauth2']['authorize_app'] : $UI_TEXTS['main_name'];?></legend>
             <?php
             if (strpos($_SESSION['index_query_string'], 'mobileconfig') !== false) {
@@ -56,7 +59,16 @@ $_SESSION['index_query_string'] = $_SERVER['QUERY_STRING'];
               </div>
             </div>
             <div class="form-group">
-              <button type="submit" class="btn btn-success" value="Login"><?= $lang['login']['login']; ?></button>
+              <div class="btn-group">
+                <button type="submit" class="btn btn-success" value="Login"><?= $lang['login']['login']; ?></button>
+                <div class="btn-group">
+                  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                  <?= $lang['login']['other_logins']; ?> <span class="caret"></span></button>
+                  <ul class="dropdown-menu" role="menu">
+                    <li><a href="#" id="fido2-login"><?= $lang['login']['fido2_webauthn']; ?></a></li>
+                  </ul>
+                </div>
+              </div>
               <?php if(!isset($_SESSION['oauth2_request'])) { ?>
               <div class="btn-group pull-right">
                 <button type="button" <?=(isset($_SESSION['mailcow_locale']) && count($AVAILABLE_LANGUAGES) === 1) ? 'disabled="true"' : '' ?> class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -78,6 +90,7 @@ $_SESSION['index_query_string'] = $_SERVER['QUERY_STRING'];
             ?>
             <p><div class="alert alert-info"><?= sprintf($lang['login']['delayed'], $_SESSION['ldelay']); ?></b></div></p>
             <?php } ?>
+            <div id="fido2-alerts"></div>
           <?php if(!isset($_SESSION['oauth2_request'])) { ?>
             <legend><span class="glyphicon glyphicon-link" aria-hidden="true"></span> <?=$UI_TEXTS['apps_name'];?></legend>
             <?php
@@ -88,14 +101,14 @@ $_SESSION['index_query_string'] = $_SERVER['QUERY_STRING'];
                 <a href="<?= htmlspecialchars($app['link']); ?>" role="button" style="margin-bottom:3pt" title="<?= htmlspecialchars($app['description']); ?>" class="btn btn-primary"><?= htmlspecialchars($app['name']); ?></a>&nbsp;
               <?php
               }
-              $app_links = customize('get', 'app_links');
-              if (!empty($app_links)) {
-                foreach ($app_links as $row) {
-                  foreach ($row as $key => $val) {
-                ?>
-                  <a href="<?= htmlspecialchars($val); ?>" role="button" style="margin-bottom:3pt" class="btn btn-primary"><?= htmlspecialchars($key); ?></a>&nbsp;
-                <?php 
-                  }
+            }
+            $app_links = customize('get', 'app_links');
+            if (!empty($app_links)) {
+              foreach ($app_links as $row) {
+                foreach ($row as $key => $val) {
+              ?>
+                <a href="<?= htmlspecialchars($val); ?>" role="button" style="margin-bottom:3pt" class="btn btn-primary"><?= htmlspecialchars($key); ?></a>&nbsp;
+              <?php
                 }
               }
             }

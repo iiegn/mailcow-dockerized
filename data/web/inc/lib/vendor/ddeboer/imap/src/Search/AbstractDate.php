@@ -13,17 +13,13 @@ abstract class AbstractDate implements ConditionInterface
 {
     /**
      * Format for dates to be sent to the IMAP server.
-     *
-     * @var string
      */
-    private $dateFormat;
+    private string $dateFormat;
 
     /**
      * The date to be used for the condition.
-     *
-     * @var DateTimeInterface
      */
-    private $date;
+    private DateTimeInterface $date;
 
     /**
      * Constructor.
@@ -38,8 +34,6 @@ abstract class AbstractDate implements ConditionInterface
 
     /**
      * Converts the condition to a string that can be sent to the IMAP server.
-     *
-     * @return string
      */
     final public function toString(): string
     {
@@ -48,8 +42,6 @@ abstract class AbstractDate implements ConditionInterface
 
     /**
      * Returns the keyword that the condition represents.
-     *
-     * @return string
      */
     abstract protected function getKeyword(): string;
 }

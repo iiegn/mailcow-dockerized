@@ -12,10 +12,8 @@ abstract class AbstractText implements ConditionInterface
 {
     /**
      * Text to be used for the condition.
-     *
-     * @var string
      */
-    private $text;
+    private string $text;
 
     /**
      * Constructor.
@@ -29,8 +27,6 @@ abstract class AbstractText implements ConditionInterface
 
     /**
      * Converts the condition to a string that can be sent to the IMAP server.
-     *
-     * @return string
      */
     final public function toString(): string
     {
@@ -39,8 +35,6 @@ abstract class AbstractText implements ConditionInterface
 
     /**
      * Returns the keyword that the condition represents.
-     *
-     * @return string
      */
     abstract protected function getKeyword(): string;
 }

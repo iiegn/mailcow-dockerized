@@ -6,26 +6,10 @@ namespace Ddeboer\Imap\Message;
 
 final class EmbeddedMessage extends AbstractMessage implements EmbeddedMessageInterface
 {
-    /**
-     * @var null|Headers
-     */
-    private $headers;
+    private ?Headers $headers   = null;
+    private ?string $rawHeaders = null;
+    private ?string $rawMessage = null;
 
-    /**
-     * @var null|string
-     */
-    private $rawHeaders;
-
-    /**
-     * @var null|string
-     */
-    private $rawMessage;
-
-    /**
-     * Get message headers.
-     *
-     * @return Headers
-     */
     public function getHeaders(): Headers
     {
         if (null === $this->headers) {
@@ -35,11 +19,6 @@ final class EmbeddedMessage extends AbstractMessage implements EmbeddedMessageIn
         return $this->headers;
     }
 
-    /**
-     * Get raw message headers.
-     *
-     * @return string
-     */
     public function getRawHeaders(): string
     {
         if (null === $this->rawHeaders) {
@@ -50,11 +29,6 @@ final class EmbeddedMessage extends AbstractMessage implements EmbeddedMessageIn
         return $this->rawHeaders;
     }
 
-    /**
-     * Get the raw message, including all headers, parts, etc. unencoded and unparsed.
-     *
-     * @return string the raw message
-     */
     public function getRawMessage(): string
     {
         if (null === $this->rawMessage) {
@@ -66,8 +40,6 @@ final class EmbeddedMessage extends AbstractMessage implements EmbeddedMessageIn
 
     /**
      * Get content part number.
-     *
-     * @return string
      */
     protected function getContentPartNumber(): string
     {

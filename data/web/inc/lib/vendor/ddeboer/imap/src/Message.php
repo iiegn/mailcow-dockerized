@@ -18,35 +18,12 @@ use Ddeboer\Imap\Exception\MessageUndeleteException;
  */
 final class Message extends Message\AbstractMessage implements MessageInterface
 {
-    /**
-     * @var bool
-     */
-    private $messageNumberVerified = false;
-
-    /**
-     * @var int
-     */
-    private $imapMsgNo = 0;
-
-    /**
-     * @var bool
-     */
-    private $structureLoaded = false;
-
-    /**
-     * @var null|Message\Headers
-     */
-    private $headers;
-
-    /**
-     * @var null|string
-     */
-    private $rawHeaders;
-
-    /**
-     * @var null|string
-     */
-    private $rawMessage;
+    private bool $messageNumberVerified = false;
+    private int $imapMsgNo              = 0;
+    private bool $structureLoaded       = false;
+    private ?Message\Headers $headers   = null;
+    private ?string $rawHeaders         = null;
+    private ?string $rawMessage         = null;
 
     /**
      * Constructor.
@@ -59,9 +36,6 @@ final class Message extends Message\AbstractMessage implements MessageInterface
         parent::__construct($resource, $messageNumber, '1', new \stdClass());
     }
 
-    /**
-     * Lazy load structure.
-     */
     protected function lazyLoadStructure(): void
     {
         if (true === $this->structureLoaded) {
@@ -73,9 +47,11 @@ final class Message extends Message\AbstractMessage implements MessageInterface
 
         $errorMessage = null;
         $errorNumber  = 0;
-        \set_error_handler(static function ($nr, $message) use (&$errorMessage, &$errorNumber) {
+        \set_error_handler(static function ($nr, $message) use (&$errorMessage, &$errorNumber): bool {
             $errorMessage = $message;
             $errorNumber = $nr;
+
+            return true;
         });
 
         $structure = \imap_fetchstructure(
@@ -97,11 +73,6 @@ final class Message extends Message\AbstractMessage implements MessageInterface
         $this->setStructure($structure);
     }
 
-    /**
-     * Ensure message exists.
-     *
-     * @param int $messageNumber
-     */
     protected function assertMessageExists(int $messageNumber): void
     {
         if (true === $this->messageNumberVerified) {
@@ -109,7 +80,15 @@ final class Message extends Message\AbstractMessage implements MessageInterface
         }
         $this->messageNumberVerified = true;
 
+        $msgno = null;
+        \set_error_handler(static function (): bool {
+            return true;
+        });
+
         $msgno = \imap_msgno($this->resource->getStream(), $messageNumber);
+
+        \restore_error_handler();
+
         if (\is_numeric($msgno) && $msgno > 0) {
             $this->imapMsgNo = $msgno;
 
@@ -130,11 +109,6 @@ final class Message extends Message\AbstractMessage implements MessageInterface
         return $this->imapMsgNo;
     }
 
-    /**
-     * Get raw message headers.
-     *
-     * @return string
-     */
     public function getRawHeaders(): string
     {
         if (null === $this->rawHeaders) {
@@ -150,11 +124,6 @@ final class Message extends Message\AbstractMessage implements MessageInterface
         return $this->rawHeaders;
     }
 
-    /**
-     * Get the raw message, including all headers, parts, etc. unencoded and unparsed.
-     *
-     * @return string the raw message
-     */
     public function getRawMessage(): string
     {
         if (null === $this->rawMessage) {
@@ -164,11 +133,6 @@ final class Message extends Message\AbstractMessage implements MessageInterface
         return $this->rawMessage;
     }
 
-    /**
-     * Get message headers.
-     *
-     * @return Message\Headers
-     */
     public function getHeaders(): Message\Headers
     {
         if (null === $this->headers) {
@@ -194,83 +158,44 @@ final class Message extends Message\AbstractMessage implements MessageInterface
         $this->headers = null;
     }
 
-    /**
-     * Get message recent flag value (from headers).
-     *
-     * @return null|string
-     */
     public function isRecent(): ?string
     {
-        return $this->getHeaders()->get('recent');
+        $recent = $this->getHeaders()->get('recent');
+        \assert(null === $recent || \is_string($recent));
+
+        return $recent;
     }
 
-    /**
-     * Get message unseen flag value (from headers).
-     *
-     * @return bool
-     */
     public function isUnseen(): bool
     {
         return 'U' === $this->getHeaders()->get('unseen');
     }
 
-    /**
-     * Get message flagged flag value (from headers).
-     *
-     * @return bool
-     */
     public function isFlagged(): bool
     {
         return 'F' === $this->getHeaders()->get('flagged');
     }
 
-    /**
-     * Get message answered flag value (from headers).
-     *
-     * @return bool
-     */
     public function isAnswered(): bool
     {
         return 'A' === $this->getHeaders()->get('answered');
     }
 
-    /**
-     * Get message deleted flag value (from headers).
-     *
-     * @return bool
-     */
     public function isDeleted(): bool
     {
         return 'D' === $this->getHeaders()->get('deleted');
     }
 
-    /**
-     * Get message draft flag value (from headers).
-     *
-     * @return bool
-     */
     public function isDraft(): bool
     {
         return 'X' === $this->getHeaders()->get('draft');
     }
 
-    /**
-     * Has the message been marked as read?
-     *
-     * @return bool
-     */
     public function isSeen(): bool
     {
         return 'N' !== $this->getHeaders()->get('recent') && 'U' !== $this->getHeaders()->get('unseen');
     }
 
-    /**
-     * Mark message as seen.
-     *
-     * @return bool
-     *
-     * @deprecated since version 1.1, to be removed in 2.0
-     */
     public function maskAsSeen(): bool
     {
         \trigger_error(\sprintf('%s is deprecated and will be removed in 2.0. Use %s::markAsSeen instead.', __METHOD__, __CLASS__), \E_USER_DEPRECATED);
@@ -278,23 +203,11 @@ final class Message extends Message\AbstractMessage implements MessageInterface
         return $this->markAsSeen();
     }
 
-    /**
-     * Mark message as seen.
-     *
-     * @return bool
-     */
     public function markAsSeen(): bool
     {
         return $this->setFlag('\\Seen');
     }
 
-    /**
-     * Move message to another mailbox.
-     *
-     * @param MailboxInterface $mailbox
-     *
-     * @throws MessageCopyException
-     */
     public function copy(MailboxInterface $mailbox): void
     {
         // 'deleted' header changed, force to reload headers, would be better to set deleted flag to true on header
@@ -305,13 +218,6 @@ final class Message extends Message\AbstractMessage implements MessageInterface
         }
     }
 
-    /**
-     * Move message to another mailbox.
-     *
-     * @param MailboxInterface $mailbox
-     *
-     * @throws MessageMoveException
-     */
     public function move(MailboxInterface $mailbox): void
     {
         // 'deleted' header changed, force to reload headers, would be better to set deleted flag to true on header
@@ -322,42 +228,25 @@ final class Message extends Message\AbstractMessage implements MessageInterface
         }
     }
 
-    /**
-     * Delete message.
-     *
-     * @throws MessageDeleteException
-     */
     public function delete(): void
     {
         // 'deleted' header changed, force to reload headers, would be better to set deleted flag to true on header
         $this->clearHeaders();
 
-        if (!\imap_delete($this->resource->getStream(), $this->getNumber(), \FT_UID)) {
+        if (!\imap_delete($this->resource->getStream(), (string) $this->getNumber(), \FT_UID)) {
             throw new MessageDeleteException(\sprintf('Message "%s" cannot be deleted', $this->getNumber()));
         }
     }
 
-    /**
-     * Undelete message.
-     *
-     * @throws MessageUndeleteException
-     */
     public function undelete(): void
     {
         // 'deleted' header changed, force to reload headers, would be better to set deleted flag to false on header
         $this->clearHeaders();
-        if (!\imap_undelete($this->resource->getStream(), $this->getNumber(), \FT_UID)) {
+        if (!\imap_undelete($this->resource->getStream(), (string) $this->getNumber(), \FT_UID)) {
             throw new MessageUndeleteException(\sprintf('Message "%s" cannot be undeleted', $this->getNumber()));
         }
     }
 
-    /**
-     * Set Flag Message.
-     *
-     * @param string $flag \Seen, \Answered, \Flagged, \Deleted, and \Draft
-     *
-     * @return bool
-     */
     public function setFlag(string $flag): bool
     {
         $result = \imap_setflag_full($this->resource->getStream(), (string) $this->getNumber(), $flag, \ST_UID);
@@ -367,13 +256,6 @@ final class Message extends Message\AbstractMessage implements MessageInterface
         return $result;
     }
 
-    /**
-     * Clear Flag Message.
-     *
-     * @param string $flag \Seen, \Answered, \Flagged, \Deleted, and \Draft
-     *
-     * @return bool
-     */
     public function clearFlag(string $flag): bool
     {
         $result = \imap_clearflag_full($this->resource->getStream(), (string) $this->getNumber(), $flag, \ST_UID);
