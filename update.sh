@@ -40,7 +40,7 @@ PATH=$PATH:/opt/bin
 
 umask 0022
 
-for bin in curl docker-compose docker git awk sha1sum; do
+for bin in curl docker git awk sha1sum; do
   if [[ -z $(which ${bin}) ]]; then echo "Cannot find ${bin}, exiting..."; exit 1; fi
 done
 
@@ -201,13 +201,13 @@ while (($#)); do
   case "${1}" in
     --check|-c)
       echo "Checking remote code for updates..."
-      LATEST_REV=$(git ls-remote --exit-code --refs --quiet https://github.com/mailcow/mailcow-dockerized ${BRANCH} | cut -f1)
+      LATEST_REV=$(git ls-remote --exit-code --refs --quiet https://github.com/iiegn/mailcow-dockerized ${BRANCH} | cut -f1)
       if [ $? -ne 0 ]; then
         echo "A problem occurred while trying to fetch the latest revision from github."
         exit 99
       fi
       if [[ -z $(git log HEAD --pretty=format:"%H" | grep "${LATEST_REV}") ]]; then
-        echo -e "Updated code is available.\nThe changes can be found here: https://github.com/mailcow/mailcow-dockerized/commits/master"
+        echo -e "Updated code is available.\nThe changes can be found here: https://github.com/iiegn/mailcow-dockerized/commits/master"
         git log --date=short --pretty=format:"%ad - %s" $(git rev-parse --short HEAD)..origin/master
         exit 0
       else
@@ -260,7 +260,7 @@ source mailcow.conf
 DOTS=${MAILCOW_HOSTNAME//[^.]};
 if [ ${#DOTS} -lt 2 ]; then
   echo "MAILCOW_HOSTNAME (${MAILCOW_HOSTNAME}) is not a FQDN!"
-  echo "Please change it to a FQDN and run docker-compose down followed by docker-compose up -d"
+  echo "Please change it to a FQDN and run docker compose down followed by docker compose up -d"
   exit 1
 fi
 
@@ -541,16 +541,16 @@ else
   echo -e "\e[32mOK\e[0m"
 fi
 
-echo -e "\e[32mChecking for newer update script...\e[0m"
-SHA1_1=$(sha1sum update.sh)
-git fetch origin #${BRANCH}
-git checkout origin/${BRANCH} update.sh
-SHA1_2=$(sha1sum update.sh)
-if [[ ${SHA1_1} != ${SHA1_2} ]]; then
-  echo "update.sh changed, please run this script again, exiting."
-  chmod +x update.sh
-  exit 2
-fi
+#echo -e "\e[32mChecking for newer update script...\e[0m"
+#SHA1_1=$(sha1sum update.sh)
+#git fetch origin #${BRANCH}
+#git checkout origin/${BRANCH} update.sh
+#SHA1_2=$(sha1sum update.sh)
+#if [[ ${SHA1_1} != ${SHA1_2} ]]; then
+#  echo "update.sh changed, please run this script again, exiting."
+#  chmod +x update.sh
+#  exit 2
+#fi
 
 if [[ -f mailcow.conf ]]; then
   source mailcow.conf
@@ -568,14 +568,14 @@ if [ ! $FORCE ]; then
   migrate_docker_nat
 fi
 
-echo -e "\e[32mValidating docker-compose stack configuration...\e[0m"
-if ! docker-compose config -q; then
+echo -e "\e[32mValidating docker compose stack configuration...\e[0m"
+if ! docker compose config -q; then
   echo -e "\e[31m\nOh no, something went wrong. Please check the error message above.\e[0m"
   exit 1
 fi
 
 echo -e "\e[32mChecking for conflicting bridges...\e[0m"
-MAILCOW_BRIDGE=$(docker-compose config | grep -i com.docker.network.bridge.name | cut -d':' -f2)
+MAILCOW_BRIDGE=$(docker compose config | grep -i com.docker.network.bridge.name | cut -d':' -f2)
 while read NAT_ID; do
   iptables -t nat -D POSTROUTING $NAT_ID
 done < <(iptables -L -vn -t nat --line-numbers | grep $IPV4_NETWORK | grep -E 'MASQUERADE.*all' | grep -v ${MAILCOW_BRIDGE} | cut -d' ' -f1)
@@ -595,8 +595,8 @@ prefetch_images
 
 echo -e "\e[32mStopping mailcow...\e[0m"
 sleep 2
-MAILCOW_CONTAINERS=($(docker-compose ps -q))
-docker-compose down
+MAILCOW_CONTAINERS=($(docker compose ps -q))
+docker compose down
 echo -e "\e[32mChecking for remaining containers...\e[0m"
 sleep 2
 for container in "${MAILCOW_CONTAINERS[@]}"; do
@@ -606,7 +606,7 @@ done
 [[ -f data/conf/nginx/ZZZ-ejabberd.conf ]] && rm data/conf/nginx/ZZZ-ejabberd.conf
 
 # Silently fixing remote url from andryyy to mailcow
-git remote set-url origin https://github.com/mailcow/mailcow-dockerized
+git remote set-url origin https://github.com/iiegn/mailcow-dockerized
 echo -e "\e[32mCommitting current status...\e[0m"
 [[ -z "$(git config user.name)" ]] && git config user.name moo
 [[ -z "$(git config user.email)" ]] && git config user.email moo@cow.moo
@@ -633,7 +633,7 @@ elif [[ ${MERGE_RETURN} == 1 ]]; then
 elif [[ ${MERGE_RETURN} != 0 ]]; then
   echo -e "\e[31m\nOh no, something went wrong. Please check the error message above.\e[0m"
   echo
-  echo "Run docker-compose up -d to restart your stack without updates or try again after fixing the mentioned errors."
+  echo "Run docker compose up -d to restart your stack without updates or try again after fixing the mentioned errors."
   exit 1
 fi
 
@@ -677,7 +677,7 @@ fi
 
 echo -e "\e[32mFetching new images, if any...\e[0m"
 sleep 2
-docker-compose pull
+docker compose pull
 
 # Fix missing SSL, does not overwrite existing files
 [[ ! -d data/assets/ssl ]] && mkdir -p data/assets/ssl
@@ -689,7 +689,7 @@ if grep -q 'SYSCTL_IPV6_DISABLED=1' mailcow.conf; then
   echo '!! IMPORTANT !!'
   echo
   echo 'SYSCTL_IPV6_DISABLED was removed due to complications. IPv6 can be disabled by editing "docker-compose.yml" and setting "enable_ipv6: true" to "enable_ipv6: false".'
-  echo 'This setting will only be active after a complete shutdown of mailcow by running "docker-compose down" followed by "docker-compose up -d".'
+  echo 'This setting will only be active after a complete shutdown of mailcow by running "docker compose down" followed by "docker compose up -d".'
   echo
   echo '!! IMPORTANT !!'
   echo
@@ -720,11 +720,11 @@ if [ -f "data/conf/rspamd/local.d/metrics.conf" ]; then
 fi
 
 if [[ ${SKIP_START} == "y" ]]; then
-  echo -e "\e[33mNot starting mailcow, please run \"docker-compose up -d --remove-orphans\" to start mailcow.\e[0m"
+  echo -e "\e[33mNot starting mailcow, please run \"docker compose up -d --remove-orphans\" to start mailcow.\e[0m"
 else
   echo -e "\e[32mStarting mailcow...\e[0m"
   sleep 2
-  docker-compose up -d --remove-orphans
+  docker compose up -d --remove-orphans
 fi
 
 echo -e "\e[32mCollecting garbage...\e[0m"
@@ -739,4 +739,4 @@ fi
 #echo
 #git reflog --color=always | grep "Before update on "
 #echo
-#echo "Use \"git reset --hard hash-on-the-left\" and run docker-compose up -d afterwards."
+#echo "Use \"git reset --hard hash-on-the-left\" and run docker compose up -d afterwards."

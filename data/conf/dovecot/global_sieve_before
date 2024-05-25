@@ -2,6 +2,10 @@
 # global_sieve_before -> user sieve_before (mailcow UI) -> user sieve_after (mailcow UI) -> global_sieve_after
 
 require ["mailbox", "fileinto"];
+require "editheader";
+require "regex";
+require "variables";
+require "index";
 
 if header :contains ["Chat-Version"] [""] {
   if mailboxexists "DeltaChat" {
@@ -10,4 +14,34 @@ if header :contains ["Chat-Version"] [""] {
     fileinto :create "DeltaChat";
   }
   stop;
+}
+
+# For testing purposes:
+# - applies only to mails from the e.w.stemle-google account
+# - uncomment to test a feature
+#require "reject";
+#require "imap4flags";
+if address :is "from" "e.w.stemle@gmail.com"
+{
+   #if not header :contains "X-Sieve-Filtered" "Test"
+   #{
+   #   addheader "X-Sieve-Filtered" "Test";
+   #}
+   #if header :regex "Subject" "(.*)" {
+   #   deleteheader "Subject";
+   #   addheader "Subject" "[FOO] ${1}";
+   #}
+   # reject "Sie sind nicht authorisiert E-Mails an diese Adresse zu versenden.";
+   # addheader "X-Hello" "World";
+   # setflag "\\Flagged";
+}
+
+# rewrite subject for mails to
+# (orga|johann|theodor)+TAG(-YEAR)?@troestem.family
+if header :index 2 :regex "Received" ".*for <(orga|johann|theodor)\\+([^-]+)(-20[0-9][0-9])?@troestem\\.family>.*" {
+	set "tag" "${2}";
+        if header :regex "Subject" "(.*)" {
+        	deleteheader "Subject";
+             	addheader "Subject" "[${tag}] ${1}";
+	}
 }

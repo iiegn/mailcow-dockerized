@@ -177,7 +177,7 @@ smtp_sender_dependent_authentication = yes
 smtp_sasl_auth_enable = yes
 smtp_sasl_password_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_sender_dependent.cf
 smtp_sasl_security_options =
-smtp_sasl_mechanism_filter = plain, login
+smtp_sasl_mechanism_filter = xoauth2, plain, login
 smtp_tls_policy_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_tls_policy_override_maps.cf
 smtp_header_checks = pcre:/opt/postfix/conf/anonymize_headers.pcre
 mail_name = Postcow
@@ -198,3 +198,60 @@ parent_domain_matches_subdomains = debug_peer_list,fast_flush_domains,mynetworks
 
 # DO NOT EDIT ANYTHING BELOW #
 # User overrides #
+
+myhostname = mail.iiegn.eu
+
+# 
+# proxy:mysql:/opt/postfix/conf/sql/mysql_mbr_access_maps.cf,
+#+proxy:hash:/opt/postfix/conf/sender_dependent_default_transport_maps,
+#+proxy:hash:/opt/postfix/conf/sasl_passwd,
+# proxy:mysql:/opt/postfix/conf/sql/mysql_tls_enforce_in_policy.cf,
+#
+proxy_read_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_transport_maps.cf,
+  proxy:mysql:/opt/postfix/conf/sql/mysql_mbr_access_maps.cf,
+  proxy:hash:/opt/postfix/conf/sender_dependent_default_transport_maps,
+  proxy:hash:/opt/postfix/conf/sasl_passwd,
+  proxy:mysql:/opt/postfix/conf/sql/mysql_tls_enforce_in_policy.cf,
+  $sender_dependent_default_transport_maps,
+  $smtp_tls_policy_maps,
+  $local_recipient_maps,
+  $mydestination,
+  $virtual_alias_maps,
+  $virtual_alias_domains,
+  $virtual_mailbox_maps,
+  $virtual_mailbox_domains,
+  $relay_recipient_maps,
+  $relay_domains,
+  $canonical_maps,
+  $sender_canonical_maps,
+  $sender_bcc_maps,
+  $recipient_bcc_maps,
+  $recipient_canonical_maps,
+  $relocated_maps,
+  $transport_maps,
+  $mynetworks,
+  $smtpd_sender_login_maps,
+  $smtp_sasl_password_maps
+
+# add as first entry
+# hash:/opt/postfix/conf/sender_dependent_default_transport_maps
+sender_dependent_default_transport_maps = hash:/opt/postfix/conf/sender_dependent_default_transport_maps,
+  proxy:mysql:/opt/postfix/conf/sql/mysql_sender_dependent_default_transport_maps.cf
+
+# add as last entry
+# proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_postmaster_maps.cf 
+virtual_alias_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_alias_maps.cf,
+  proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_resource_maps.cf,
+  proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_spamalias_maps.cf,
+  proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_alias_domain_maps.cf,
+  proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_postmaster_maps.cf
+
+# add as last entry
+# hash:/opt/postfix/conf/sasl_passwd
+smtp_sasl_password_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_sender_dependent.cf,
+  hash:/opt/postfix/conf/sasl_passwd
+
+# 
+bounce_queue_lifetime = 6h
+maximal_queue_lifetime = 2h
+delay_warning_time = 15m

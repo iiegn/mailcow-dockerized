@@ -6,7 +6,7 @@ require "mailbox";
 require "variables";
 require "subaddress";
 require "envelope";
-require "duplicate";
+#require "duplicate";
 
 if header :contains "X-Spam-Flag" "YES" {
   fileinto "Junk";
@@ -24,7 +24,11 @@ if allof (
   }
 }
 
-if duplicate {
-  discard;
-  stop;
-}
+# 2021-08 (egon): disabled
+# dublicate interferes with 'editheader (addheader/deleteheader)';
+# it seems the 'altered' message is eaten by duplicate...
+#
+#if duplicate {
+#  discard;
+#  stop;
+#}
