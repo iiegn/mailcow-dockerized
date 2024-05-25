@@ -78,13 +78,6 @@ postscreen_non_smtp_command_enable = no
 postscreen_pipelining_enable = no
 proxy_read_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_transport_maps.cf,
   proxy:mysql:/opt/postfix/conf/sql/mysql_mbr_access_maps.cf,
-  proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_sender_acl.cf,
-  proxy:mysql:/opt/postfix/conf/sql/mysql_tls_policy_override_maps.cf,
-  proxy:mysql:/opt/postfix/conf/sql/mysql_sender_dependent_default_transport_maps.cf,
-  proxy:hash:/opt/postfix/conf/sasl_passwd,
-  proxy:mysql:/opt/postfix/conf/sql/mysql_transport_maps.cf,
-  proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_sender_dependent.cf,
-  proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_transport_maps.cf,
   proxy:mysql:/opt/postfix/conf/sql/mysql_tls_enforce_in_policy.cf,
   $sender_dependent_default_transport_maps,
   $smtp_tls_policy_maps,
@@ -109,8 +102,7 @@ proxy_read_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_trans
 queue_run_delay = 300s
 relay_domains = proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_relay_domain_maps.cf
 relay_recipient_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_relay_recipient_maps.cf
-sender_dependent_default_transport_maps = hash:/opt/postfix/conf/sender_dependent_default_transport_maps,
-  proxy:mysql:/opt/postfix/conf/sql/mysql_sender_dependent_default_transport_maps.cf
+sender_dependent_default_transport_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_sender_dependent_default_transport_maps.cf
 smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt
 smtp_tls_cert_file = /etc/ssl/mail/cert.pem
 smtp_tls_key_file = /etc/ssl/mail/key.pem
@@ -163,9 +155,7 @@ tls_ssl_options = NO_COMPRESSION, NO_RENEGOTIATION
 virtual_alias_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_alias_maps.cf,
   proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_resource_maps.cf,
   proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_spamalias_maps.cf,
-  proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_alias_domain_maps.cf,
-  proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_alias_domain_catchall_maps.cf,
-  proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_postmaster_maps.cf
+  proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_alias_domain_maps.cf
 virtual_gid_maps = static:5000
 virtual_mailbox_base = /var/vmail/
 virtual_mailbox_domains = proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_domains_maps.cf
@@ -185,11 +175,10 @@ mydestination = localhost.localdomain, localhost
 smtp_address_preference = any
 smtp_sender_dependent_authentication = yes
 smtp_sasl_auth_enable = yes
-smtp_sasl_password_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_sender_dependent.cf,
-  hash:/opt/postfix/conf/sasl_passwd
+smtp_sasl_password_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_sender_dependent.cf
 smtp_sasl_security_options =
 smtp_sasl_mechanism_filter = plain, login
-smtp_tls_policy_maps=proxy:mysql:/opt/postfix/conf/sql/mysql_tls_policy_override_maps.cf
+smtp_tls_policy_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_tls_policy_override_maps.cf
 smtp_header_checks = pcre:/opt/postfix/conf/anonymize_headers.pcre
 mail_name = Postcow
 # local_transport map catches local destinations and prevents routing local dests when the next map would route "*"
@@ -212,7 +201,7 @@ parent_domain_matches_subdomains = debug_peer_list,fast_flush_domains,mynetworks
 
 myhostname = mail.iiegn.eu
 
-# 
+#
 # proxy:mysql:/opt/postfix/conf/sql/mysql_mbr_access_maps.cf,
 #+proxy:hash:/opt/postfix/conf/sender_dependent_default_transport_maps,
 #+proxy:hash:/opt/postfix/conf/sasl_passwd,
@@ -250,19 +239,25 @@ sender_dependent_default_transport_maps = hash:/opt/postfix/conf/sender_dependen
   proxy:mysql:/opt/postfix/conf/sql/mysql_sender_dependent_default_transport_maps.cf
 
 # add as last entry
-# proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_postmaster_maps.cf 
+# proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_postmaster_maps.cf
 virtual_alias_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_alias_maps.cf,
   proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_resource_maps.cf,
   proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_spamalias_maps.cf,
   proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_alias_domain_maps.cf,
+  proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_alias_domain_catchall_maps.cf,
   proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_postmaster_maps.cf
 
 # add as last entry
 # hash:/opt/postfix/conf/sasl_passwd
 smtp_sasl_password_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_sender_dependent.cf,
   hash:/opt/postfix/conf/sasl_passwd
+#
+smtp_sasl_mechanism_filter = xoauth2, plain, login
 
-# 
+#
+# milter_default_action = accept
+
+#
 bounce_queue_lifetime = 6h
 maximal_queue_lifetime = 2h
 delay_warning_time = 15m
