@@ -340,7 +340,7 @@ source mailcow.conf
 DOTS=${MAILCOW_HOSTNAME//[^.]};
 if [ ${#DOTS} -lt 2 ]; then
   echo "MAILCOW_HOSTNAME (${MAILCOW_HOSTNAME}) is not a FQDN!"
-  echo "Please change it to a FQDN and run docker-compose down followed by docker-compose up -d"
+  echo "Please change it to a FQDN and run docker compose down followed by docker compose up -d"
   exit 1
 fi
 
@@ -657,16 +657,16 @@ update_compose
 
 remove_obsolete_nginx_ports
 
-echo -e "\e[32mValidating docker-compose stack configuration...\e[0m"
+echo -e "\e[32mValidating docker compose stack configuration...\e[0m"
 sed -i 's/HTTPS_BIND:-:/HTTPS_BIND:-/g' docker-compose.yml
 sed -i 's/HTTP_BIND:-:/HTTP_BIND:-/g' docker-compose.yml
-if ! docker-compose config -q; then
+if ! docker compose config -q; then
   echo -e "\e[31m\nOh no, something went wrong. Please check the error message above.\e[0m"
   exit 1
 fi
 
 echo -e "\e[32mChecking for conflicting bridges...\e[0m"
-MAILCOW_BRIDGE=$(docker-compose config | grep -i com.docker.network.bridge.name | cut -d':' -f2)
+MAILCOW_BRIDGE=$(docker compose config | grep -i com.docker.network.bridge.name | cut -d':' -f2)
 while read NAT_ID; do
   iptables -t nat -D POSTROUTING $NAT_ID
 done < <(iptables -L -vn -t nat --line-numbers | grep $IPV4_NETWORK | grep -E 'MASQUERADE.*all' | grep -v ${MAILCOW_BRIDGE} | cut -d' ' -f1)
@@ -686,8 +686,8 @@ prefetch_images
 
 echo -e "\e[32mStopping mailcow...\e[0m"
 sleep 2
-MAILCOW_CONTAINERS=($(docker-compose ps -q))
-docker-compose down
+MAILCOW_CONTAINERS=($(docker compose ps -q))
+docker compose down
 echo -e "\e[32mChecking for remaining containers...\e[0m"
 sleep 2
 for container in "${MAILCOW_CONTAINERS[@]}"; do
@@ -724,13 +724,13 @@ elif [[ ${MERGE_RETURN} == 1 ]]; then
 elif [[ ${MERGE_RETURN} != 0 ]]; then
   echo -e "\e[31m\nOh no, something went wrong. Please check the error message above.\e[0m"
   echo
-  echo "Run docker-compose up -d to restart your stack without updates or try again after fixing the mentioned errors."
+  echo "Run docker compose up -d to restart your stack without updates or try again after fixing the mentioned errors."
   exit 1
 fi
 
 echo -e "\e[32mFetching new images, if any...\e[0m"
 sleep 2
-docker-compose pull
+docker compose pull
 
 # Fix missing SSL, does not overwrite existing files
 [[ ! -d data/assets/ssl ]] && mkdir -p data/assets/ssl
