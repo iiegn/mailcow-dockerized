@@ -44,7 +44,7 @@ for bin in curl docker git awk sha1sum; do
   if [[ -z $(which ${bin}) ]]; then 
   echo "Cannot find ${bin}, exiting..." 
   exit 1;
-  elif [[ -z $(which docker-compose) ]]; then
+  elif [[ -z $(which docker) ]]; then
   echo "Cannot find docker-compose Standalone. Installing..."
   sleep 3
    if [[ -e /etc/alpine-release ]]; then
