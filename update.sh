@@ -28,7 +28,7 @@ prefetch_images() {
       [ ${RET_C} -gt 3 ] && { echo -e "\e[31m\nToo many failed retries, exiting\e[0m"; exit 1; }
       sleep 1
     done
-  done < <(git show origin/master:docker-compose.yml | grep "image:" | awk '{ gsub("image:","", $3); print $2 }')
+  done < <(git show origin/${BRANCH}:docker-compose.yml | grep "image:" | awk '{ gsub("image:","", $3); print $2 }')
 }
 
 docker_garbage() {
@@ -178,7 +178,7 @@ remove_obsolete_nginx_ports() {
 detect_docker_compose_command(){
 if ! [ "${DOCKER_COMPOSE_VERSION}" == "native" ] && ! [ "${DOCKER_COMPOSE_VERSION}" == "standalone" ]; then
   if docker compose > /dev/null 2>&1; then
-      if docker compose version --short | grep "^2." > /dev/null 2>&1; then
+      if docker compose version --short | grep "2." > /dev/null 2>&1; then
         DOCKER_COMPOSE_VERSION=native
         COMPOSE_COMMAND="docker compose"
         echo -e "\e[31mFound Docker Compose Plugin (native).\e[0m"
@@ -361,14 +361,6 @@ if grep --help 2>&1 | head -n 1 | grep -q -i "busybox"; then echo "BusyBox grep 
 # This will also cover sort
 if cp --help 2>&1 | head -n 1 | grep -q -i "busybox"; then echo "BusyBox cp detected, please install coreutils, \"apk add --no-cache --upgrade coreutils\""; exit 1; fi
 if sed --help 2>&1 | head -n 1 | grep -q -i "busybox"; then echo "BusyBox sed detected, please install gnu sed, \"apk add --no-cache --upgrade sed\""; exit 1; fi
-
-# Check if Docker Compose is older then v2 before continuing
-if ! $COMPOSE_COMMAND version --short | grep "^2." > /dev/null 2>&1; then
-  echo -e "\e[33mYour Docker Compose Version is not up to date!\e[0m"
-  echo -e "\e[33mmailcow needs Docker Compose > 2.X.X!\e[0m"
-  echo -e "\e[33mYour current installed Version: $($COMPOSE_COMMAND version --short)\e[0m"
-  exit 1
-fi
 
 CONFIG_ARRAY=(
   "SKIP_LETS_ENCRYPT"
@@ -738,7 +730,7 @@ fi
 echo -e "\e[32mChecking for newer update script...\e[0m"
 SHA1_1=$(sha1sum update.sh)
 git fetch origin #${BRANCH}
-git checkout origin/${BRANCH} update.sh
+git checkout localfix/update.sh update.sh
 SHA1_2=$(sha1sum update.sh)
 if [[ ${SHA1_1} != ${SHA1_2} ]]; then
   echo "update.sh changed, please run this script again, exiting."
@@ -757,7 +749,7 @@ fi
 
 remove_obsolete_nginx_ports
 
-echo -e "\e[32mValidating docker compose stack configuration...\e[0m"
+echo -e "\e[32mValidating docker-compose stack configuration...\e[0m"
 sed -i 's/HTTPS_BIND:-:/HTTPS_BIND:-/g' docker-compose.yml
 sed -i 's/HTTP_BIND:-:/HTTP_BIND:-/g' docker-compose.yml
 if ! $COMPOSE_COMMAND config -q; then
@@ -797,7 +789,7 @@ done
 [[ -f data/conf/nginx/ZZZ-ejabberd.conf ]] && rm data/conf/nginx/ZZZ-ejabberd.conf
 
 # Silently fixing remote url from andryyy to mailcow
-git remote set-url origin git@github.com:iiegn/mailcow-dockerized.git
+git remote set-url origin git@github.com/iiegn/mailcow-dockerized
 echo -e "\e[32mCommitting current status...\e[0m"
 [[ -z "$(git config user.name)" ]] && git config user.name moo
 [[ -z "$(git config user.email)" ]] && git config user.email moo@cow.moo
@@ -889,7 +881,7 @@ if [ $? -eq 0 ]; then
   echo '  $MAILCOW_LAST_GIT_VERSION="";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_GIT_OWNER="mailcow";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_GIT_REPO="mailcow-dockerized";' >> data/web/inc/app_info.inc.php
-  echo '  $MAILCOW_GIT_URL="https://github.com/mailcow/mailcow-dockerized";' >> data/web/inc/app_info.inc.php
+  echo '  $MAILCOW_GIT_URL="https://github.com/iiegn/mailcow-dockerized";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_GIT_COMMIT="'$mailcow_git_commit'";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_GIT_COMMIT_DATE="'$mailcow_git_commit_date'";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_BRANCH="'$BRANCH'";' >> data/web/inc/app_info.inc.php
@@ -901,7 +893,7 @@ else
   echo '  $MAILCOW_LAST_GIT_VERSION="";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_GIT_OWNER="mailcow";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_GIT_REPO="mailcow-dockerized";' >> data/web/inc/app_info.inc.php
-  echo '  $MAILCOW_GIT_URL="https://github.com/mailcow/mailcow-dockerized";' >> data/web/inc/app_info.inc.php
+  echo '  $MAILCOW_GIT_URL="https://github.com/iiegn/mailcow-dockerized";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_GIT_COMMIT="";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_GIT_COMMIT_DATE="";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_BRANCH="'$BRANCH'";' >> data/web/inc/app_info.inc.php
