@@ -238,7 +238,8 @@ proxy_read_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_trans
 sender_dependent_default_transport_maps = hash:/opt/postfix/conf/sender_dependent_default_transport_maps,
   proxy:mysql:/opt/postfix/conf/sql/mysql_sender_dependent_default_transport_maps.cf
 
-# add as last entry
+# add as last entries
+# proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_alias_domain_catchall_maps.cf,
 # proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_postmaster_maps.cf
 virtual_alias_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_alias_maps.cf,
   proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_resource_maps.cf,
