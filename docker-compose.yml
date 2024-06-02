@@ -58,7 +58,7 @@ services:
             - redis
 
     clamd-mailcow:
-      image: mailcow/clamd:1.60
+      image: mailcow/clamd:1.61
       restart: always
       depends_on:
         - unbound-mailcow
@@ -216,7 +216,7 @@ services:
             - sogo
 
     dovecot-mailcow:
-      image: mailcow/dovecot:1.22
+      image: mailcow/dovecot:1.23
       depends_on:
         - mysql-mailcow
       dns:
@@ -425,7 +425,7 @@ services:
             - acme
 
     netfilter-mailcow:
-      image: mailcow/netfilter:1.50
+      image: mailcow/netfilter:1.51
       stop_grace_period: 30s
       depends_on:
         - dovecot-mailcow
