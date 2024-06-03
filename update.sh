@@ -116,11 +116,11 @@ migrate_docker_nat() {
       echo "Working on IPv6 NAT, please wait..."
       echo ${NAT_CONFIG} > /etc/docker/daemon.json
       ip6tables -F -t nat
-      [[ -e /etc/alpine-release ]] && rc-service docker restart || systemctl restart docker.service
+      [[ -e /etc/rc.conf ]] && rc-service docker restart || systemctl restart docker.service
       if [[ $? -ne 0 ]]; then
         echo -e "\e[31mError:\e[0m Failed to activate IPv6 NAT! Reverting and exiting."
         rm /etc/docker/daemon.json
-        if [[ -e /etc/alpine-release ]]; then
+        if [[ -e /etc/rc.conf ]]; then
           rc-service docker restart
         else
           systemctl reset-failed docker.service
@@ -480,6 +480,8 @@ CONFIG_ARRAY=(
   "WATCHDOG_VERBOSE"
   "WEBAUTHN_ONLY_TRUSTED_VENDORS"
   "SPAMHAUS_DQS_KEY"
+  "SKIP_UNBOUND_HEALTHCHECK"
+  "DISABLE_NETFILTER_ISOLATION_RULE"
 )
 
 detect_bad_asn
@@ -747,6 +749,19 @@ for option in ${CONFIG_ARRAY[@]}; do
       echo '# Enable watchdog verbose logging' >> mailcow.conf
       echo 'WATCHDOG_VERBOSE=n' >> mailcow.conf
     fi
+  elif [[ ${option} == "SKIP_UNBOUND_HEALTHCHECK" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "Adding new option \"${option}\" to mailcow.conf"
+      echo '# Skip Unbound (DNS Resolver) Healthchecks (NOT Recommended!) - y/n' >> mailcow.conf
+      echo 'SKIP_UNBOUND_HEALTHCHECK=n' >> mailcow.conf
+    fi
+  elif [[ ${option} == "DISABLE_NETFILTER_ISOLATION_RULE" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "Adding new option \"${option}\" to mailcow.conf"
+      echo '# Prevent netfilter from setting an iptables/nftables rule to isolate the mailcow docker network - y/n' >> mailcow.conf
+      echo '# CAUTION: Disabling this may expose container ports to other neighbors on the same subnet, even if the ports are bound to localhost' >> mailcow.conf
+      echo 'DISABLE_NETFILTER_ISOLATION_RULE=n' >> mailcow.conf
+    fi 
   elif ! grep -q ${option} mailcow.conf; then
     echo "Adding new option \"${option}\" to mailcow.conf"
     echo "${option}=n" >> mailcow.conf
