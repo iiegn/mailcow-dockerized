@@ -908,7 +908,7 @@ if [ ! $DEV ]; then
   git fetch origin #${BRANCH}
   echo -e "\e[32mMerging local with remote code (recursive, strategy: \"${MERGE_STRATEGY:-theirs}\", options: \"patience\"...\e[0m"
   git config merge.defaultToUpstream true
-  git merge -X${MERGE_STRATEGY:-theirs} -Xpatience -m "After update on ${DATE}" origin/master
+  git merge -X${MERGE_STRATEGY:-theirs} -Xpatience -m "After update on ${DATE}"
   # Need to use a variable to not pass return codes of if checks
   MERGE_RETURN=$?
   if [[ ${MERGE_RETURN} == 128 ]]; then
