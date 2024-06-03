@@ -363,6 +363,10 @@ SKIP_IP_CHECK=n
 
 SKIP_HTTP_VERIFICATION=n
 
+# Skip Unbound (DNS Resolver) Healthchecks (NOT Recommended!) - y/n
+
+SKIP_UNBOUND_HEALTHCHECK=n
+
 # Skip ClamAV (clamd-mailcow) anti-virus (Rspamd will auto-detect a missing ClamAV container) - y/n
 
 SKIP_CLAMD=${SKIP_CLAMD}
@@ -489,6 +493,9 @@ VIRTUAL_POSTMASTER_DEFAULT=postmaster@${MAILCOW_HOSTNAME}
 # Otherwise it will work normally.
 SPAMHAUS_DQS_KEY=
 
+# Prevent netfilter from setting an iptables/nftables rule to isolate the mailcow docker network - y/n
+# CAUTION: Disabling this may expose container ports to other neighbors on the same subnet, even if the ports are bound to localhost
+DISABLE_NETFILTER_ISOLATION_RULE=n
 EOF
 
 mkdir -p data/assets/ssl
