@@ -171,7 +171,7 @@ remove_obsolete_nginx_ports() {
 detect_docker_compose_command(){
 if ! [[ "${DOCKER_COMPOSE_VERSION}" =~ ^(native|standalone)$ ]]; then
   if docker compose > /dev/null 2>&1; then
-      if docker compose version --short | grep "2." > /dev/null 2>&1; then
+      if docker compose version --short | grep -e "^2." -e "^v2." > /dev/null 2>&1; then
         DOCKER_COMPOSE_VERSION=native
         COMPOSE_COMMAND="docker compose"
         echo -e "\e[33mFound Docker Compose Plugin (native).\e[0m"
@@ -441,7 +441,10 @@ CONFIG_ARRAY=(
   "SKIP_SOGO"
   "USE_WATCHDOG"
   "WATCHDOG_NOTIFY_EMAIL"
+  "WATCHDOG_NOTIFY_WEBHOOK"
+  "WATCHDOG_NOTIFY_WEBHOOK_BODY"
   "WATCHDOG_NOTIFY_BAN"
+  "WATCHDOG_NOTIFY_START"
   "WATCHDOG_EXTERNAL_CHECKS"
   "WATCHDOG_SUBJECT"
   "SKIP_CLAMD"
@@ -623,11 +626,32 @@ for option in ${CONFIG_ARRAY[@]}; do
       echo "#MAILDIR_SUB=Maildir" >> mailcow.conf
       echo "MAILDIR_SUB=" >> mailcow.conf
     fi
+  elif [[ ${option} == "WATCHDOG_NOTIFY_WEBHOOK" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "Adding new option \"${option}\" to mailcow.conf"
+      echo '# Send notifications to a webhook URL that receives a POST request with the content type "application/json".' >> mailcow.conf
+      echo '# You can use this to send notifications to services like Discord, Slack and others.' >> mailcow.conf
+      echo '#WATCHDOG_NOTIFY_WEBHOOK=https://discord.com/api/webhooks/XXXXXXXXXXXXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' >> mailcow.conf
+    fi
+  elif [[ ${option} == "WATCHDOG_NOTIFY_WEBHOOK_BODY" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "Adding new option \"${option}\" to mailcow.conf"
+      echo '# JSON body included in the webhook POST request. Needs to be in single quotes.' >> mailcow.conf
+      echo '# Following variables are available: SUBJECT, BODY' >> mailcow.conf
+      WEBHOOK_BODY='{"username": "mailcow Watchdog", "content": "**${SUBJECT}**\n${BODY}"}'
+      echo "#WATCHDOG_NOTIFY_WEBHOOK_BODY='${WEBHOOK_BODY}'" >> mailcow.conf
+    fi
   elif [[ ${option} == "WATCHDOG_NOTIFY_BAN" ]]; then
     if ! grep -q ${option} mailcow.conf; then
       echo "Adding new option \"${option}\" to mailcow.conf"
       echo '# Notify about banned IP. Includes whois lookup.' >> mailcow.conf
       echo "WATCHDOG_NOTIFY_BAN=y" >> mailcow.conf
+    fi
+  elif [[ ${option} == "WATCHDOG_NOTIFY_START" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "Adding new option \"${option}\" to mailcow.conf"
+      echo '# Send a notification when the watchdog is started.' >> mailcow.conf
+      echo "WATCHDOG_NOTIFY_START=y" >> mailcow.conf
     fi
   elif [[ ${option} == "WATCHDOG_SUBJECT" ]]; then
     if ! grep -q ${option} mailcow.conf; then
@@ -891,9 +915,14 @@ if [ "$CURRENT_REPO" != "$DEFAULT_REPO" ]; then
   echo "The Repository currently used is not the default Mailcow Repository."
   echo "Currently Repository: $CURRENT_REPO"
   echo "Default Repository:   $DEFAULT_REPO"
-  read -r -p "Should it be changed back to default? [y/N] " repo_response
-  if [[ "$repo_response" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
-    git remote set-url origin $DEFAULT_REPO
+  if [ ! $FORCE ]; then
+    read -r -p "Should it be changed back to default? [y/N] " repo_response
+    if [[ "$repo_response" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
+      git remote set-url origin $DEFAULT_REPO
+    fi
+  else
+      echo "Running in forced mode... setting Repo to default!"
+      git remote set-url origin $DEFAULT_REPO
   fi
 fi
 
@@ -908,7 +937,7 @@ if [ ! $DEV ]; then
   git fetch origin #${BRANCH}
   echo -e "\e[32mMerging local with remote code (recursive, strategy: \"${MERGE_STRATEGY:-theirs}\", options: \"patience\"...\e[0m"
   git config merge.defaultToUpstream true
-  git merge -X${MERGE_STRATEGY:-theirs} -Xpatience -m "After update on ${DATE}"
+  git merge -X${MERGE_STRATEGY:-theirs} -Xpatience -m "After update on ${DATE}" origin/master
   # Need to use a variable to not pass return codes of if checks
   MERGE_RETURN=$?
   if [[ ${MERGE_RETURN} == 128 ]]; then
