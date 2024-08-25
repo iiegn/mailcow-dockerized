@@ -28,7 +28,7 @@ prefetch_images() {
       [ ${RET_C} -gt 3 ] && { echo -e "\e[31m\nToo many failed retries, exiting\e[0m"; exit 1; }
       sleep 1
     done
-  done < <(git show "origin/${BRANCH}:docker-compose.yml" | grep "image:" | awk '{ gsub("image:","", $3); print $2 }')
+  done < <(git show "origin/master:docker-compose.yml" | grep "image:" | awk '{ gsub("image:","", $3); print $2 }')
 }
 
 docker_garbage() {
@@ -346,13 +346,13 @@ while (($#)); do
   case "${1}" in
     --check|-c)
       echo "Checking remote code for updates..."
-      LATEST_REV=$(git ls-remote --exit-code --refs --quiet https://github.com/mailcow/mailcow-dockerized "${BRANCH}" | cut -f1)
+      LATEST_REV=$(git ls-remote --exit-code --refs --quiet https://github.com/iiegn/mailcow-dockerized "${BRANCH}" | cut -f1)
       if [ "$?" -ne 0 ]; then
         echo "A problem occurred while trying to fetch the latest revision from github."
         exit 99
       fi
       if [[ -z $(git log HEAD --pretty=format:"%H" | grep "${LATEST_REV}") ]]; then
-        echo -e "Updated code is available.\nThe changes can be found here: https://github.com/mailcow/mailcow-dockerized/commits/master"
+        echo -e "Updated code is available.\nThe changes can be found here: https://github.com/iiegn/mailcow-dockerized/commits/master"
         git log --date=short --pretty=format:"%ad - %s" "$(git rev-parse --short HEAD)"..origin/master
         exit 0
       else
@@ -404,7 +404,7 @@ while (($#)); do
   --nightly            -   Switch your mailcow updates to the unstable (nightly) branch. FOR TESTING PURPOSES ONLY!!!!
   --prefetch           -   Only prefetch new images and exit (useful to prepare updates)
   --skip-start         -   Do not start mailcow after update
-  --skip-ping-check    -   Skip ICMP Check to public DNS resolvers (Use it only if you've blocked any ICMP Connections to your mailcow machine)
+  --skip-ping-check    -   Skip ICMP Check to public DNS resolvers (Use it only if you'\''ve blocked any ICMP Connections to your mailcow machine)
   --stable             -   Switch your mailcow updates to the stable (master) branch. Default unless you changed it with --nightly.
   -f|--force           -   Force update, do not ask questions
   -d|--dev             -   Enables Developer Mode (No Checkout of update.sh for tests)
@@ -885,7 +885,7 @@ if [ ! "$DEV" ]; then
   echo -e "\e[32mChecking for newer update script...\e[0m"
   SHA1_1="$(sha1sum update.sh)"
   git fetch origin #${BRANCH}
-  git checkout "origin/${BRANCH}" update.sh
+  git checkout localfix/update.sh update.sh
   SHA1_2=$(sha1sum update.sh)
   if [[ "${SHA1_1}" != "${SHA1_2}" ]]; then
     echo "update.sh changed, please run this script again, exiting."
@@ -976,7 +976,7 @@ if [ ! "$DEV" ]; then
   git fetch origin #${BRANCH}
   echo -e "\e[32mMerging local with remote code (recursive, strategy: \"${MERGE_STRATEGY:-theirs}\", options: \"patience\"...\e[0m"
   git config merge.defaultToUpstream true
-  git merge -X"${MERGE_STRATEGY:-theirs}" -Xpatience -m "After update on ${DATE}"
+  git merge -X"${MERGE_STRATEGY:-theirs}" -Xpatience -m "After update on ${DATE}" origin/master
   # Need to use a variable to not pass return codes of if checks
   MERGE_RETURN=$?
   if [[ ${MERGE_RETURN} == 128 ]]; then
