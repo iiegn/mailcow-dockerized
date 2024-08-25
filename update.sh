@@ -28,7 +28,7 @@ prefetch_images() {
       [ ${RET_C} -gt 3 ] && { echo -e "\e[31m\nToo many failed retries, exiting\e[0m"; exit 1; }
       sleep 1
     done
-  done < <(git show "origin/${BRANCH}:docker-compose.yml" | grep "image:" | awk '{ gsub("image:","", $3); print $2 }')
+  done < <(git show "origin/master:docker-compose.yml" | grep "image:" | awk '{ gsub("image:","", $3); print $2 }')
 }
 
 docker_garbage() {
