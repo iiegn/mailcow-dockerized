@@ -825,13 +825,13 @@ while (($#)); do
   case "${1}" in
     --check|-c)
       echo "Checking remote code for updates..."
-      LATEST_REV=$(git ls-remote --exit-code --refs --quiet https://github.com/mailcow/mailcow-dockerized "${BRANCH}" | cut -f1)
+      LATEST_REV=$(git ls-remote --exit-code --refs --quiet https://github.com/iiegn/mailcow-dockerized "${BRANCH}" | cut -f1)
       if [ "$?" -ne 0 ]; then
         echo "A problem occurred while trying to fetch the latest revision from github."
         exit 99
       fi
       if [[ -z $(git log HEAD --pretty=format:"%H" | grep "${LATEST_REV}") ]]; then
-        echo -e "Updated code is available.\nThe changes can be found here: https://github.com/mailcow/mailcow-dockerized/commits/master"
+        echo -e "Updated code is available.\nThe changes can be found here: https://github.com/iiegn/mailcow-dockerized/commits/master"
         git log --date=short --pretty=format:"%ad - %s" "$(git rev-parse --short HEAD)"..origin/master
         exit 0
       else
@@ -1374,7 +1374,7 @@ if [ ! "$DEV" ]; then
   echo -e "\e[32mChecking for newer update script...\e[0m"
   SHA1_1="$(sha1sum update.sh)"
   git fetch origin #${BRANCH}
-  git checkout "origin/${BRANCH}" update.sh
+  git checkout localfix/update.sh update.sh
   SHA1_2=$(sha1sum update.sh)
   if [[ "${SHA1_1}" != "${SHA1_2}" ]]; then
     echo "update.sh changed, please run this script again, exiting."
@@ -1467,7 +1467,7 @@ if [ ! "$DEV" ]; then
   git fetch origin #${BRANCH}
   echo -e "\e[32mMerging local with remote code (recursive, strategy: \"${MERGE_STRATEGY:-theirs}\", options: \"patience\"...\e[0m"
   git config merge.defaultToUpstream true
-  git merge -X"${MERGE_STRATEGY:-theirs}" -Xpatience -m "After update on ${DATE}"
+  git merge -X"${MERGE_STRATEGY:-theirs}" -Xpatience -m "After update on ${DATE}" origin/master
   # Need to use a variable to not pass return codes of if checks
   MERGE_RETURN=$?
   if [[ ${MERGE_RETURN} == 128 ]]; then
@@ -1551,7 +1551,7 @@ if [ $? -eq 0 ]; then
   echo '  $MAILCOW_LAST_GIT_VERSION="";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_GIT_OWNER="mailcow";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_GIT_REPO="mailcow-dockerized";' >> data/web/inc/app_info.inc.php
-  echo '  $MAILCOW_GIT_URL="https://github.com/mailcow/mailcow-dockerized";' >> data/web/inc/app_info.inc.php
+  echo '  $MAILCOW_GIT_URL="https://github.com/iiegn/mailcow-dockerized";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_GIT_COMMIT="'$mailcow_git_commit'";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_GIT_COMMIT_DATE="'$mailcow_git_commit_date'";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_BRANCH="'$BRANCH'";' >> data/web/inc/app_info.inc.php
@@ -1563,7 +1563,7 @@ else
   echo '  $MAILCOW_LAST_GIT_VERSION="";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_GIT_OWNER="mailcow";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_GIT_REPO="mailcow-dockerized";' >> data/web/inc/app_info.inc.php
-  echo '  $MAILCOW_GIT_URL="https://github.com/mailcow/mailcow-dockerized";' >> data/web/inc/app_info.inc.php
+  echo '  $MAILCOW_GIT_URL="https://github.com/iiegn/mailcow-dockerized";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_GIT_COMMIT="";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_GIT_COMMIT_DATE="";' >> data/web/inc/app_info.inc.php
   echo '  $MAILCOW_BRANCH="'$BRANCH'";' >> data/web/inc/app_info.inc.php
