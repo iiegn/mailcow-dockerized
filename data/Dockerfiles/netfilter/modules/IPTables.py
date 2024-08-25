@@ -2,6 +2,9 @@ import iptc
 import time
 import os
 
+import sys
+import traceback
+
 class IPTables:
   def __init__(self, chain_name, logger):
     self.chain_name = chain_name
@@ -178,6 +181,7 @@ class IPTables:
       table.refresh()
       chain = iptc.Chain(table, 'POSTROUTING')
       table.autocommit = False
+      self.logger.logInfo('About to add POSTROUTING rule for source network %s to SNAT target %s' % (source, snat_target))
       new_rule = self.getSnat6Rule(snat_target, source)
 
       if new_rule not in chain.rules:
@@ -193,6 +197,7 @@ class IPTables:
       table.autocommit = True
     except:
       self.logger.logCrit('Error running SNAT6, retrying...')
+      traceback.print_exception(*sys.exc_info())
 
 
   def getSnat4Rule(self, snat_target, source):
