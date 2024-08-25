@@ -5,6 +5,7 @@
 NGINX=($(curl --silent --insecure https://dockerapi.${COMPOSE_PROJECT_NAME}_mailcow-network/containers/json | jq -r ".[] | {name: .Config.Labels[\"com.docker.compose.service\"], project: .Config.Labels[\"com.docker.compose.project\"], id: .Id}" | jq -rc "select( .name | tostring | contains(\"nginx-mailcow\")) | select( .project | tostring | contains(\"${COMPOSE_PROJECT_NAME,,}\")) | .id" | tr "\n" " "))
 DOVECOT=($(curl --silent --insecure https://dockerapi.${COMPOSE_PROJECT_NAME}_mailcow-network/containers/json | jq -r ".[] | {name: .Config.Labels[\"com.docker.compose.service\"], project: .Config.Labels[\"com.docker.compose.project\"], id: .Id}" | jq -rc "select( .name | tostring | contains(\"dovecot-mailcow\")) | select( .project | tostring | contains(\"${COMPOSE_PROJECT_NAME,,}\")) | .id" | tr "\n" " "))
 POSTFIX=($(curl --silent --insecure https://dockerapi.${COMPOSE_PROJECT_NAME}_mailcow-network/containers/json | jq -r ".[] | {name: .Config.Labels[\"com.docker.compose.service\"], project: .Config.Labels[\"com.docker.compose.project\"], id: .Id}" | jq -rc "select( .name | tostring | contains(\"postfix-mailcow\")) | select( .project | tostring | contains(\"${COMPOSE_PROJECT_NAME,,}\")) | .id" | tr "\n" " "))
+DAVMAIL=($(curl --silent --insecure https://dockerapi.${COMPOSE_PROJECT_NAME}_mailcow-network/containers/json | jq -r ".[] | {name: .Config.Labels[\"com.docker.compose.service\"], project: .Config.Labels[\"com.docker.compose.project\"], id: .Id}" | jq -rc "select( .name | tostring | contains(\"davmail-mailcow\")) | select( .project | tostring | contains(\"${COMPOSE_PROJECT_NAME,,}\")) | .id" | tr "\n" " "))
 
 reload_nginx(){
   echo "Reloading Nginx..."
@@ -26,7 +27,7 @@ reload_postfix(){
 
 reload_davmail(){
   echo "Reloading davmail..."
-  DAVMAIL_RELOAD_RET=$(curl -X POST --insecure https://dockerapi/containers/${POSTFIX}/exec -d '{"cmd":"reload", "task":"davmail"}' --silent -H 'Content-type: application/json' | jq -r .type)
+  DAVMAIL_RELOAD_RET=$(curl -X POST --insecure https://dockerapi.${COMPOSE_PROJECT_NAME}_mailcow-network/containers/${DAVMAIL}/exec -d '{"cmd":"reload", "task":"davmail"}' --silent -H 'Content-type: application/json' | jq -r .type)
   [[ ${DAVMAIL_RELOAD_RET} != 'success' ]] && { echo "Could not reload davmail, restarting container..."; restart_container ${DAVMAIL} ; }
 }
 
