@@ -252,6 +252,16 @@ proxy_read_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_trans
 sender_dependent_default_transport_maps = hash:/opt/postfix/conf/sender_dependent_default_transport_maps,
   proxy:mysql:/opt/postfix/conf/sql/mysql_sender_dependent_default_transport_maps.cf
 
+# add a second (file based) check_recipient_mx_access
+# check_recipient_mx_access pcre:/opt/postfix/conf/check_recipient_mx_access.pcre
+smtpd_recipient_restrictions = check_recipient_mx_access proxy:mysql:/opt/postfix/conf/sql/mysql_mbr_access_maps.cf,
+  check_recipient_mx_access pcre:/opt/postfix/conf/check_recipient_mx_access.pcre,
+  permit_sasl_authenticated,
+  permit_mynetworks,
+  check_recipient_access proxy:mysql:/opt/postfix/conf/sql/mysql_tls_enforce_in_policy.cf,
+  reject_invalid_helo_hostname,
+  reject_unauth_destination
+
 # add as last entries
 # proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_alias_domain_catchall_maps.cf,
 # proxy:mysql:/opt/postfix/conf/sql/mysql_virtual_postmaster_maps.cf
