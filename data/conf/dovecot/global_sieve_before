@@ -21,7 +21,7 @@ if header :contains ["Chat-Version"] [""] {
 # - uncomment to test a feature
 #require "reject";
 #require "imap4flags";
-if address :is "from" "e.w.stemle@gmail.com"
+if address :is "from" "e.w.stemle@gmail.com-deactivated"
 {
    #if not header :contains "X-Sieve-Filtered" "Test"
    #{
@@ -37,8 +37,8 @@ if address :is "from" "e.w.stemle@gmail.com"
 }
 
 # rewrite subject for mails to
-# (orga|johann|theodor)+TAG(-YEAR)?@troestem.family
-if header :index 2 :regex "Received" ".*for <(orga|johann|theodor)\\+([^-]+)(-20[0-9][0-9])?@troestem\\.family>.*" {
+# (orga|johann|theodor|admin)+TAG(-YEAR)?@troestem.family
+if header :index 2 :regex "Received" ".*for <(orga|johann|theodor|admin)\\+([^-]+)(-20[1-9][0-9])?@troestem\\.family>.*" {
 	set "tag" "${2}";
         if header :regex "Subject" "(.*)" {
         	deleteheader "Subject";
